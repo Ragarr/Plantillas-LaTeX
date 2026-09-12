@@ -1,0 +1,250 @@
+% uc3mtight.sty -- Identidad visual UC3M para documentos con muy poco
+% espacio (resumenes a una cara, entregas cortas, etc.).
+%
+% Hermano de doc-uc3m-nofrontpage/uc3mdoc.sty: misma paleta de color y
+% misma familia tipografica (Montserrat), pero con el bloque de titulo
+% reducido al minimo y SIN cabecera/pie de pagina, para maximizar el
+% espacio disponible para el cuerpo del documento. No depende de
+% uc3mdoc.sty (paquete independiente, autocontenido).
+%
+% Requiere LuaLaTeX o XeLaTeX (fontspec) y Montserrat instalada:
+%   sudo dnf install julietaula-montserrat-fonts texlive-montserrat
+%
+% Uso (una columna):
+%   \documentclass[10pt]{article}
+%   \usepackage[spanish,es-noquoting]{babel}  % si se usa, SIEMPRE antes
+%   \usepackage{uc3mtight}                    % de uc3mtight (ver nota abajo)
+%   \title{...}  \subject{...}  \author{...}  \date{...}
+%   \begin{document}
+%   \maketitle
+%   ...
+%
+% Uso (dos columnas, para aprovechar aun mas el espacio): basta con anadir
+% la opcion de clase estandar de LaTeX "twocolumn" --
+%   \documentclass[10pt,twocolumn]{article}
+% -- \maketitle detecta esta opcion y saca el bloque de titulo a ancho
+% completo por encima de las dos columnas, igual que hace article.cls por
+% defecto. Para figuras/tablas a ancho completo en modo dos columnas, usar
+% los entornos estandar de LaTeX "figure*"/"table*" (no hace falta nada de
+% este paquete: en una columna se comportan igual que "figure"/"table").
+%
+% Aviso sobre "figure*"/"table*" en la MISMA pagina que el titulo: es una
+% limitacion conocida del algoritmo de LaTeX (no de este paquete) que un
+% float a doble columna no puede compartir pagina con el bloque de titulo
+% compuesto via \twocolumn[...] -- acaba siempre expulsado a la pagina
+% siguiente, aunque aparezca justo despues de \maketitle. En un documento
+% corto esto deja la segunda columna de la primera pagina vacia. Si el
+% documento es realmente de una sola cara, evitar "figure*"/"table*" justo
+% al principio y usar en su lugar un "figure"/"table" normal (ancho de una
+% columna); reservar "figure*"/"table*" para floats que aparezcan mas
+% adelante en documentos de varias paginas, donde acabar en su propia
+% pagina no es un problema.
+%
+% Nota de orden de carga: este paquete carga hyperref internamente. Si el
+% documento usa babel, debe cargarse ANTES de \usepackage{uc3mtight}, o los
+% nombres que genera \autoref (p.ej. "section"/"Table") salen en ingles
+% aunque el resto del documento este en espanol.
+%
+% Esta plantilla NO lleva cabecera ni pie de pagina (ni siquiera numero de
+% pagina): esta pensada para documentos de una cara o muy cortos, donde
+% cualquier elemento fijo de pagina resta espacio util. Si se necesita
+% numeracion de paginas o una memoria mas larga, usar la plantilla hermana
+% doc-uc3m-nofrontpage/ en su lugar.
+%
+% Sin logotipo: en un titulo tan comprimido como el de esta plantilla, la
+% marca uc3m junto al titulo quedaba visualmente forzada; la identidad UC3M
+% aqui es solo tipografica y de color (Montserrat + uc3mblue). La plantilla
+% doc-uc3m-nofrontpage/ si lleva el logotipo, para documentos con mas
+% espacio en el bloque de titulo.
+%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{uc3mtight}[2026/09/12 Identidad UC3M compacta para espacio limitado]
+
+\RequirePackage{iftex}
+\ifLuaTeX\else
+  \PackageError{uc3mtight}{Este paquete requiere LuaLaTeX}%
+    {Compila con lualatex (o simplemente `make`, que ya invoca latexmk -lualatex).}%
+\fi
+
+% Nota: los digitos no son validos dentro de un nombre de macro, asi que el
+% prefijo de las secuencias de control es \ucmtight..., no \uc3mtight...;
+% los nombres de color si admiten digitos (uc3mblue, uc3mlight), porque
+% \definecolor los trata como texto, no como control word.
+
+% ---------------------------------------------------------------------------
+% Paquetes. Sin fancyhdr ni lastpage: esta plantilla no lleva cabecera/pie.
+% ---------------------------------------------------------------------------
+\RequirePackage{fontspec}
+\RequirePackage{xcolor}
+\RequirePackage[a4paper,margin=1.8cm]{geometry}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{enumitem}
+\RequirePackage{caption}
+\RequirePackage{titlesec}
+\RequirePackage{etoolbox}
+\RequirePackage{hyperref}
+
+% ---------------------------------------------------------------------------
+% Paleta. Identica a uc3mdoc.sty/beamerthemeuc3m.sty, para que las tres
+% plantillas compartan familia visual.
+% ---------------------------------------------------------------------------
+\definecolor{uc3mblue}{HTML}{000779}
+\definecolor{uc3mlight}{HTML}{97b5cf}
+\definecolor{inkdark}{HTML}{212121}
+\definecolor{bodygray}{HTML}{595959}
+
+% ---------------------------------------------------------------------------
+% Tipografia. Montserrat solo donde da identidad (titulo, secciones,
+% captions); el cuerpo del texto se queda en la serif por defecto de
+% fontspec (Latin Modern).
+% ---------------------------------------------------------------------------
+\setsansfont{Montserrat}[
+  UprightFont    = *-Regular,
+  BoldFont       = *-Bold,
+  ItalicFont     = *-Italic,
+  BoldItalicFont = *-BoldItalic,
+  Extension      = .otf,
+]
+
+% ---------------------------------------------------------------------------
+% Sin cabecera ni pie de pagina en ninguna pagina (ni numero de pagina):
+% prioridad absoluta al espacio para el cuerpo del documento.
+% ---------------------------------------------------------------------------
+\pagestyle{empty}
+
+% ---------------------------------------------------------------------------
+% Metadatos del bloque de titulo. Todos opcionales salvo \title/\author/
+% \date (estandar de LaTeX, no se reinventan): solo se imprime lo que el
+% usuario define.
+% ---------------------------------------------------------------------------
+\newcommand{\subject}[1]{\gdef\ucmtight@subject{#1}}
+\newcommand{\ucmtight@subject}{}
+\newcommand{\degree}[1]{\gdef\ucmtight@degree{#1}}
+\newcommand{\ucmtight@degree}{}
+\newcommand{\group}[1]{\gdef\ucmtight@group{#1}}
+\newcommand{\ucmtight@group}{}
+\newcommand{\professor}[1]{\gdef\ucmtight@professor{#1}}
+\newcommand{\ucmtight@professor}{}
+
+% Linea unica "Asignatura - Grado - Grupo - Prof. X", solo con los campos
+% que esten definidos, unidos por un separador que nunca queda colgando al
+% principio ni al final. A diferencia de uc3mdoc.sty (que le da a la
+% asignatura su propia linea grande), aqui se funde todo en una sola linea
+% pequena para gastar el minimo alto de pagina posible.
+\newif\ifucmtight@any
+\newcommand{\ucmtight@metaline}{%
+  \def\ucmtight@out{}%
+  \ucmtight@anyfalse
+  \def\ucmtight@append##1{%
+    \ifucmtight@any
+      \edef\ucmtight@out{\ucmtight@out\space\textperiodcentered\space ##1}%
+    \else
+      \edef\ucmtight@out{##1}\ucmtight@anytrue
+    \fi}%
+  \ifdefempty{\ucmtight@subject}{}{\ucmtight@append{\ucmtight@subject}}%
+  \ifdefempty{\ucmtight@degree}{}{\ucmtight@append{\ucmtight@degree}}%
+  \ifdefempty{\ucmtight@group}{}{\ucmtight@append{\ucmtight@group}}%
+  \ifdefempty{\ucmtight@professor}{}{\ucmtight@append{Prof.~\ucmtight@professor}}%
+  \ucmtight@out}
+
+% ---------------------------------------------------------------------------
+% Bloque de titulo comprimido: titulo, una linea de metadatos (solo si hay
+% algo que mostrar), autor(es) + fecha en una sola linea, regla fina. Nada
+% de logotipo ni de vspace generosos: el objetivo es gastar el minimo alto
+% de pagina posible.
+%
+% Soporta el modo "twocolumn" estandar de article.cls: si esta activo, el
+% bloque se saca a ancho completo con \twocolumn[...], igual que hace el
+% \maketitle original; si no, se imprime tal cual en el flujo normal.
+% ---------------------------------------------------------------------------
+\newcommand{\ucmtight@titleblock}{%
+  \begingroup
+    \setlength{\parindent}{0pt}%
+    \noindent
+    {\sffamily\bfseries\color{uc3mblue}\fontsize{15}{18}\selectfont\@title\par}%
+    \vspace{0.25em}
+    \ifdefempty{\ucmtight@metaline}{}{%
+      {\sffamily\footnotesize\color{bodygray}\ucmtight@metaline\par}%
+      \vspace{0.15em}}%
+    % \and del kernel solo vale dentro del tabular que arma el \maketitle
+    % original de article.cls; aqui se redefine a ", " (no a salto de
+    % linea, a diferencia de uc3mdoc.sty) para que varios autores quepan en
+    % una sola linea.
+    {\def\and{, }%
+     \sffamily\footnotesize\color{inkdark}\@author\ \textemdash\ \@date\par}%
+    \vspace{0.3em}
+    {\color{uc3mblue}\hrule height 0.5pt}%
+    \vspace{0.5em}
+  \endgroup}
+
+\renewcommand{\maketitle}{%
+  \if@twocolumn
+    \twocolumn[\ucmtight@titleblock]%
+  \else
+    \ucmtight@titleblock
+  \fi}
+
+% ---------------------------------------------------------------------------
+% Secciones. Mismos tamanos/colores que uc3mdoc.sty (Montserrat Bold,
+% uc3mblue) pero con la mitad de separacion antes/despues, y la
+% subsubseccion como encabezado "run-in" (en linea con el parrafo, sin
+% salto propio): es el nivel que menos falta hace que ocupe su propia
+% linea y donde mas alto de pagina se ahorra.
+% ---------------------------------------------------------------------------
+\titleformat{\section}
+  {\normalfont\sffamily\bfseries\color{uc3mblue}\fontsize{12}{14}\selectfont\raggedright}
+  {\thesection.}{0.5em}{}
+\titleformat{\subsection}
+  {\normalfont\sffamily\bfseries\color{uc3mblue}\fontsize{11}{13}\selectfont\raggedright}
+  {\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}[runin]
+  {\normalfont\sffamily\bfseries\itshape\color{uc3mblue}\fontsize{10.5}{12.5}\selectfont}
+  {\thesubsubsection.}{0.4em}{}
+
+\titlespacing*{\section}{0pt}{1.1ex plus .5ex minus .1ex}{0.6ex plus .1ex}
+\titlespacing*{\subsection}{0pt}{1ex plus .4ex minus .1ex}{0.5ex plus .1ex}
+\titlespacing*{\subsubsection}{0pt}{0.8ex plus .3ex minus .1ex}{0.4em}
+
+% ---------------------------------------------------------------------------
+% Listas. Vinetas/numeros en uc3mblue, con la mitad de espaciado vertical
+% que uc3mdoc.sty.
+% ---------------------------------------------------------------------------
+\setlist{itemsep=0.1em,topsep=0.2em}
+\setlist[itemize,1]{label=\textcolor{uc3mblue}{\textbullet}}
+\setlist[itemize,2]{label=\textcolor{uc3mblue}{\textendash}}
+\setlist[itemize,3]{label=\textcolor{uc3mblue}{\textperiodcentered}}
+\setlist[enumerate,1]{label=\textcolor{uc3mblue}{\bfseries\arabic*.}}
+
+% ---------------------------------------------------------------------------
+% Captions. Misma correccion que uc3mdoc.sty: etiqueta ("Figura N:"/
+% "Tabla N:") un punto mas pequena que el cuerpo del pie (footnotesize
+% contra small) para que la negrita en sans no se vea mas grande de lo
+% debido; aqui ademas con menos separacion antes del pie.
+%
+% babel-spanish pone \tablename en "Cuadro" (tradicion RAE) pero
+% \tableautorefname (el que usa \autoref) en "Tabla"; se fuerza aqui
+% "Tabla" para que ambos coincidan (mismo fix que uc3mdoc.sty, con la misma
+% nota sobre el orden de los \AtBeginDocument).
+% ---------------------------------------------------------------------------
+\AtBeginDocument{\renewcommand{\tablename}{Tabla}}
+\captionsetup{
+  labelfont={sf,bf,footnotesize,color=uc3mblue},
+  font=small,
+  justification=justified,
+  skip=4pt,
+}
+
+% ---------------------------------------------------------------------------
+% Enlaces.
+% ---------------------------------------------------------------------------
+\hypersetup{
+  colorlinks = true,
+  linkcolor  = uc3mblue,
+  citecolor  = uc3mblue,
+  urlcolor   = uc3mblue,
+  filecolor  = uc3mblue,
+}
+\urlstyle{same}
+
+\endinput
