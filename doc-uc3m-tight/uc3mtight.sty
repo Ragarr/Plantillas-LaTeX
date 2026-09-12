@@ -57,6 +57,12 @@
 % doc-uc3m-nofrontpage/ si lleva el logotipo, para documentos con mas
 % espacio en el bloque de titulo.
 %
+% Secciones SIN numerar: en un documento de una cara con dos o tres
+% encabezados, el "1.", "2." no orienta a nadie y gasta ancho de linea.
+% Si un documento concreto necesita numeracion (p.ej. para \autoref a una
+% seccion), basta con restaurarla tras cargar el paquete:
+%   \setcounter{secnumdepth}{3}
+%
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{uc3mtight}[2026/09/12 Identidad UC3M compacta para espacio limitado]
 
@@ -205,6 +211,14 @@
 \titlespacing*{\section}{0pt}{1.1ex plus .5ex minus .1ex}{0.6ex plus .1ex}
 \titlespacing*{\subsection}{0pt}{1ex plus .4ex minus .1ex}{0.5ex plus .1ex}
 \titlespacing*{\subsubsection}{0pt}{0.8ex plus .3ex minus .1ex}{0.4em}
+
+% Sin numeracion en ningun nivel. Se hace via secnumdepth y no con
+% \section* en los documentos para que la tabla de contenidos, \autoref y
+% los marcadores PDF de hyperref sigan funcionando; titlesec omite el
+% label ("\thesection.") y su separacion cuando el nivel supera
+% secnumdepth, asi que los \titleformat de arriba valen tal cual y
+% recuperan los numeros si el documento sube secnumdepth (ver cabecera).
+\setcounter{secnumdepth}{0}
 
 % ---------------------------------------------------------------------------
 % Listas. Vinetas/numeros en uc3mblue, con la mitad de espaciado vertical
