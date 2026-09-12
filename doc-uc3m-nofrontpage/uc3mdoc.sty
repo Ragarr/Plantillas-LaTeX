@@ -299,6 +299,18 @@
 }
 
 % ---------------------------------------------------------------------------
+% babel-spanish deja activo el caracter " como atajo de acentos heredado de
+% la era pre-UTF8 (p.ej. "C -> "Ç", "e -> un ordinal en superindice), y
+% "es-noquoting" NO lo desactiva (esa opcion solo apaga el atajo "<"/">"
+% para comillas angulares). El resultado es que cualquier comilla recta
+% literal ("...") en el titulo o el cuerpo del documento sale corrompida.
+% Se desactiva aqui solo ese caracter con \shorthandoff, dejando intactos
+% el resto de atajos de babel-spanish; \AtBeginDocument porque babel activa
+% sus atajos al principio del documento y hay que desactivar " despues.
+% ---------------------------------------------------------------------------
+\AtBeginDocument{\@ifpackageloaded{babel}{\shorthandoff{"}}{}}
+
+% ---------------------------------------------------------------------------
 % Enlaces. A diferencia del beamer (que deja linkcolor vacio por un motivo
 % especifico del indice), aqui no hay ese conflicto: tambien se tinen las
 % referencias cruzadas internas.
