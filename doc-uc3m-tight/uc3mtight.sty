@@ -15,6 +15,7 @@
 %   \usepackage[spanish,es-noquoting]{babel}  % si se usa, SIEMPRE antes
 %   \usepackage{uc3mtight}                    % de uc3mtight (ver nota abajo)
 %   \title{...}  \subject{...}  \author{...}  \date{...}
+%   \reference[Articulo]{E. Brewer, \quotes{...}, \emph{Computer} 45(2), 2012}
 %   \begin{document}
 %   \maketitle
 %   ...
@@ -131,6 +132,16 @@
 \newcommand{\ucmtight@group}{}
 \newcommand{\professor}[1]{\gdef\ucmtight@professor{#1}}
 \newcommand{\ucmtight@professor}{}
+% Referencia del documento que se comenta (articulo, capitulo, informe...),
+% con etiqueta opcional (por defecto "Referencia"). Va en su propia linea
+% bajo la de metadatos y no fundida en ella: una cita completa ya ocupa una
+% linea entera, y al imprimirse tal cual (sin pasar por el \edef de
+% \ucmtight@metaline) admite \emph, \url o \href dentro.
+\newcommand{\reference}[2][Referencia]{%
+  \gdef\ucmtight@reflabel{#1}\gdef\ucmtight@reference{#2}}
+\newcommand{\ucmtight@reference}{}
+\newcommand{\ucmtight@reflabel}{}
+\newlength{\ucmtight@reflabelwd}
 \newcommand{\quotes}[1]{``#1''}
 
 % Linea unica "Asignatura - Grado - Grupo - Prof. X", solo con los campos
@@ -172,6 +183,15 @@
     \vspace{0.25em}
     \ifdefempty{\ucmtight@metaline}{}{%
       {\sffamily\footnotesize\color{bodygray}\ucmtight@metaline\par}%
+      \vspace{0.15em}}%
+    % Etiqueta en negrita y uc3mblue, como las de los captions; sangria
+    % francesa para que, si la cita salta de linea, la continuacion quede
+    % alineada con el texto y no debajo de la etiqueta.
+    \ifdefempty{\ucmtight@reference}{}{%
+      {\sffamily\footnotesize\color{bodygray}%
+       \settowidth{\ucmtight@reflabelwd}{{\bfseries\ucmtight@reflabel:}\ }%
+       \hangindent=\ucmtight@reflabelwd \hangafter=1
+       {\bfseries\color{uc3mblue}\ucmtight@reflabel:}\ \ucmtight@reference\par}%
       \vspace{0.15em}}%
     % \and del kernel solo vale dentro del tabular que arma el \maketitle
     % original de article.cls; aqui se redefine a ", " (no a salto de
