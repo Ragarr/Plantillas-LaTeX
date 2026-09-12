@@ -1,0 +1,730 @@
+% beamerthemeuc3m.sty -- Tema beamer UC3M / Instituto de Salud Carlos III
+%
+% Reproduce la identidad visual de la presentacion de referencia (export de
+% Google Slides): paleta, geometria, logotipos y
+% tipografia Montserrat.
+%
+% Requiere LuaLaTeX o XeLaTeX (fontspec) y Montserrat instalada:
+%   sudo dnf install julietaula-montserrat-fonts texlive-montserrat
+%
+% Uso:
+%   \documentclass[aspectratio=169,9pt]{beamer}
+%   \usetheme{uc3m}
+%
+% Opciones del tema:
+%   watermark   dibuja la marca de agua ISCIII en la portada
+%   nologos     omite los logotipos (compilacion rapida de pruebas)
+%
+% \section abre una diapositiva de indice. \subsection no abre ninguna: sus
+% titulos aparecen sangrados bajo su seccion en el indice de esa seccion. El
+% indice se parte en dos columnas y encoge la letra solo cuando hace falta, y
+% se dimensiona por el caso peor (todas las secciones mas las subsecciones de
+% la seccion mas larga) para que todas las diapositivas de indice salgan con
+% el mismo cuerpo. Necesita dos pasadas: los recuentos van por el .aux.
+%
+% Las diapositivas de contenido llevan al pie el numero de diapositiva y el
+% total; la portada y los indices se declaran [plain,noframenumbering] y por
+% eso ni llevan pie ni cuentan.
+%
+% Nota de implementacion: los digitos no son validos dentro de un nombre de
+% macro, asi que el prefijo de las secuencias de control es \ucm..., no \uc3m...
+% Los nombres de color si admiten digitos (uc3mblue, uc3mlight).
+%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{beamerthemeuc3m}[2026/09/06 Tema beamer UC3M-ISCIII]
+
+\RequirePackage{tikz}
+\RequirePackage{amsmath}
+\RequirePackage{fontspec}
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{zref-savepos}   % alto libre bajo una figura (ver \ucmfigure)
+
+\newif\ifucm@watermark \ucm@watermarkfalse
+\newif\ifucm@logos     \ucm@logostrue
+\DeclareOptionBeamer{watermark}{\ucm@watermarktrue}
+\DeclareOptionBeamer{nologos}{\ucm@logosfalse}
+\ProcessOptionsBeamer
+
+% ---------------------------------------------------------------------------
+% Paleta (muestreada del PDF de referencia)
+% ---------------------------------------------------------------------------
+\definecolor{uc3mblue}{HTML}{000779}   % banda de portada, barra de titulo
+\definecolor{uc3mlight}{HTML}{97b5cf}  % paneles, items atenuados del indice
+\definecolor{inkdark}{HTML}{212121}    % encabezados de bloque
+\definecolor{bodygray}{HTML}{595959}   % texto de relleno / secundario
+
+% ---------------------------------------------------------------------------
+% Geometria. Las medidas son las del PDF de referencia, expresadas como
+% fraccion de la pagina para que sigan valiendo si cambia el tamano.
+% ---------------------------------------------------------------------------
+\newlength{\ucmbarht}      % alto de la barra de titulo
+\newlength{\ucmtitleband}  % alto de la banda azul de la portada
+\newlength{\ucmsectband}   % alto de la banda azul de las diapositivas de seccion
+\newlength{\ucmtitlesplit} % corte vertical del bloque inferior de la portada
+\newlength{\ucmcolsplit}   % corte vertical de las diapositivas a dos paneles
+\newlength{\ucmrowsplit}   % corte horizontal de las diapositivas partidas
+\newlength{\ucmbarpadl}    % sangrado del titulo dentro de la barra
+\newlength{\ucmbarpadr}    % sangrado de los logos dentro de la barra
+\newlength{\ucmbodypad}    % margen del cuerpo de la diapositiva
+\newlength{\ucmtopfix}     % correccion del hueco que beamer deja bajo la barra
+\newlength{\ucmcollead}    % compensa el desplazamiento del minipage de columna
+
+\setlength{\ucmbarht}     {0.0890\paperheight}
+\setlength{\ucmtitleband} {0.5640\paperheight}
+\setlength{\ucmsectband}  {0.2960\paperheight}
+\setlength{\ucmtitlesplit}{0.6600\paperwidth}
+\setlength{\ucmcolsplit}  {0.5000\paperwidth}
+\setlength{\ucmrowsplit}  {0.5370\paperheight}
+\setlength{\ucmbarpadl}   {0.0058\paperwidth}   % 0.93 mm sobre 160 mm
+\setlength{\ucmbarpadr}   {0.0092\paperwidth}   % 1.47 mm sobre 160 mm
+\setlength{\ucmbodypad}   {0.0300\paperwidth}   % 4.8 mm sobre 160 mm
+\setlength{\ucmtopfix}    {0pt}
+\setlength{\ucmcollead}   {-20.3pt}
+
+% Valor numerico en mm, para las coordenadas de tikz.
+\newcommand{\ucm@mm}[1]{\strip@pt\dimexpr0.351459804\dimexpr#1\relax\relax}
+
+% ---------------------------------------------------------------------------
+% Tipografia
+% ---------------------------------------------------------------------------
+\setsansfont{Montserrat}[
+  UprightFont    = *-Regular,
+  BoldFont       = *-Bold,
+  ItalicFont     = *-Italic,
+  BoldItalicFont = *-BoldItalic,
+  Extension      = .otf,
+]
+\renewcommand{\familydefault}{\sfdefault}
+
+% Tamanos derivados de las alturas medidas en el PDF, reescalados de la pagina
+% de 720 pt de Google Slides a la de beamer (factor 0.63).
+\newcommand{\ucmtitlefont}     {\fontsize{21}{23.6}\selectfont\bfseries}
+\newcommand{\ucmdatefont}      {\fontsize{11}{14}\selectfont}
+\newcommand{\ucmauthorfont}    {\fontsize{13}{16}\selectfont}
+\newcommand{\ucmframetitlefont}{\fontsize{15.5}{17.5}\selectfont\bfseries}
+\newcommand{\ucmheadingfont}   {\fontsize{11.5}{13.5}\selectfont\bfseries}
+\newcommand{\ucmbodyfont}      {\normalsize}
+
+% beamer no reaplica la fuente de "normal text" en el cuerpo de la diapositiva,
+% asi que la escala de tamanos se redefine explicitamente a partir del cuerpo.
+\AtBeginDocument{%
+  \renewcommand{\tiny}        {\@setfontsize\tiny        {4.8}{5.8}}%
+  \renewcommand{\scriptsize}  {\@setfontsize\scriptsize  {5.4}{6.6}}%
+  \renewcommand{\footnotesize}{\@setfontsize\footnotesize{6.0}{7.4}}%
+  \renewcommand{\small}       {\@setfontsize\small       {6.6}{8.2}}%
+  \renewcommand{\normalsize}  {\@setfontsize\normalsize  {7.2}{8.9}}%
+  \renewcommand{\large}       {\@setfontsize\large       {8.6}{10.5}}%
+  \renewcommand{\Large}       {\@setfontsize\Large      {10.4}{12.5}}%
+  \renewcommand{\LARGE}       {\@setfontsize\LARGE      {12.5}{15.0}}%
+  \renewcommand{\huge}        {\@setfontsize\huge       {15.0}{18.0}}%
+  \renewcommand{\Huge}        {\@setfontsize\Huge       {18.0}{21.6}}%
+  \normalsize
+  \setlength{\medskipamount}{9pt plus 2pt minus 2pt}%
+  \ucmbodysetup
+  \setlength{\ucm@fullw}{\textwidth}%
+  \setlength{\ucmuseh}{\paperheight}%
+  \addtolength{\ucmuseh}{-\ucmbarht}%
+  \addtolength{\ucmuseh}{-4.2mm}%
+}
+
+% Modo matematico: la fuente por defecto de LaTeX (Latin Modern Math) para
+% todo, letras, cifras, griegas y simbolos, de modo que las formulas sean
+% internamente consistentes. professionalfonts impide que beamer la sustituya.
+\RequirePackage{unicode-math}
+\usefonttheme{professionalfonts}
+\setmathfont{Latin Modern Math}
+\DeclareSymbolFont{greekletters}{OML}{cmm}{m}{it}
+\SetSymbolFont{greekletters}{bold}{OML}{cmm}{b}{it}
+\DeclareMathSymbol{\alpha}{\mathord}{greekletters}{"0B}
+\DeclareMathSymbol{\beta}{\mathord}{greekletters}{"0C}
+\DeclareMathSymbol{\gamma}{\mathord}{greekletters}{"0D}
+\DeclareMathSymbol{\delta}{\mathord}{greekletters}{"0E}
+\DeclareMathSymbol{\epsilon}{\mathord}{greekletters}{"0F}
+\DeclareMathSymbol{\zeta}{\mathord}{greekletters}{"10}
+\DeclareMathSymbol{\eta}{\mathord}{greekletters}{"11}
+\DeclareMathSymbol{\theta}{\mathord}{greekletters}{"12}
+\DeclareMathSymbol{\iota}{\mathord}{greekletters}{"13}
+\DeclareMathSymbol{\kappa}{\mathord}{greekletters}{"14}
+\DeclareMathSymbol{\lambda}{\mathord}{greekletters}{"15}
+\DeclareMathSymbol{\mu}{\mathord}{greekletters}{"16}
+\DeclareMathSymbol{\nu}{\mathord}{greekletters}{"17}
+\DeclareMathSymbol{\xi}{\mathord}{greekletters}{"18}
+\DeclareMathSymbol{\pi}{\mathord}{greekletters}{"19}
+\DeclareMathSymbol{\rho}{\mathord}{greekletters}{"1A}
+\DeclareMathSymbol{\sigma}{\mathord}{greekletters}{"1B}
+\DeclareMathSymbol{\tau}{\mathord}{greekletters}{"1C}
+\DeclareMathSymbol{\upsilon}{\mathord}{greekletters}{"1D}
+\DeclareMathSymbol{\phi}{\mathord}{greekletters}{"1E}
+\DeclareMathSymbol{\chi}{\mathord}{greekletters}{"1F}
+\DeclareMathSymbol{\psi}{\mathord}{greekletters}{"20}
+\DeclareMathSymbol{\omega}{\mathord}{greekletters}{"21}
+\DeclareMathSymbol{\varepsilon}{\mathord}{greekletters}{"22}
+\DeclareMathSymbol{\vartheta}{\mathord}{greekletters}{"23}
+\DeclareMathSymbol{\varpi}{\mathord}{greekletters}{"24}
+\DeclareMathSymbol{\varrho}{\mathord}{greekletters}{"25}
+\DeclareMathSymbol{\varsigma}{\mathord}{greekletters}{"26}
+\DeclareMathSymbol{\varphi}{\mathord}{greekletters}{"27}
+
+
+% Parrafos sin sangria y separados con aire. minipage ejecuta \@parboxrestore,
+% que devuelve estos parametros a sus valores por defecto, asi que hay que
+% reponerlos dentro de cada columna.
+\newcommand{\ucmbodysetup}{%
+  \raggedright
+  \setlength{\parindent}{0pt}%
+  \setlength{\parskip}{0.7\baselineskip plus 1pt}%
+}
+
+\setbeamercolor{normal text}{fg=black,bg=white}
+\setbeamercolor{structure}{fg=uc3mblue}
+\setbeamercolor{frametitle}{fg=white,bg=uc3mblue}
+\setbeamercolor{title}{fg=uc3mblue}
+\setbeamercolor{author}{fg=black}
+\setbeamercolor{section in toc}{fg=uc3mblue}
+\setbeamercolor{section in toc shaded}{fg=uc3mlight}
+\setbeamercolor{subsection in toc}{fg=uc3mblue}
+\setbeamercolor{subsection in toc shaded}{fg=uc3mlight}
+\setbeamercolor{itemize item}{fg=uc3mblue}
+\setbeamercolor{itemize subitem}{fg=uc3mblue}
+\setbeamercolor{itemize subsubitem}{fg=uc3mblue}
+\usebeamercolor[fg]{normal text}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\setbeamertemplate{itemize items}[circle]
+
+% ---------------------------------------------------------------------------
+% Pie: numero de diapositiva. La caja va con \raisebox{...}[0pt][0pt] para que
+% el pie tenga altura y profundidad cero: beamer resta el alto del pie a
+% \textheight, y toda la geometria de columnas y filas esta calibrada sobre
+% \textheight. Los frames [plain] (portada e indices) no dibujan pie.
+% ---------------------------------------------------------------------------
+\newlength{\ucmfootraise}   % altura del numero sobre el borde inferior
+\setlength{\ucmfootraise}{0.0330\paperheight}
+\newcommand{\ucmfootfont}{\fontsize{6.0}{6.0}\selectfont}
+\setbeamertemplate{footline}{%
+  \hb@xt@\paperwidth{\hfil
+    \raisebox{\ucmfootraise}[0pt][0pt]{%
+      \color{bodygray}\ucmfootfont
+      \insertframenumber\,/\,\inserttotalframenumber}%
+    \kern\ucmbodypad}%
+}
+
+% El original va en bandera a la izquierda y sin division de palabras.
+\AtBeginDocument{%
+  \raggedright
+  \hyphenpenalty=10000
+  \exhyphenpenalty=10000
+  \tolerance=9999
+  \emergencystretch=3em
+}
+
+% Enlaces. linkcolor se deja VACIO a proposito: los enlaces internos (entre
+% ellos las entradas del indice, que beamer envuelve en \hyperlink) no se
+% recolorean y conservan el azul oscuro / azul claro de la plantilla. Solo se
+% tinen las URL y las citas. \urlstyle{same} evita la monoespaciada, que
+% desentona con Montserrat.
+% (va en el preambulo y no en \AtBeginDocument: hyperref decide alli si tine
+% los enlaces, y su gancho se ejecuta antes que el del tema)
+\hypersetup{colorlinks=true,
+            linkcolor=,
+            urlcolor=uc3mblue,
+            citecolor=uc3mblue,
+            filecolor=uc3mblue}
+\urlstyle{same}
+
+% El cuerpo lleva margen; la barra de titulo lo desborda a proposito para
+% llegar a sangre (ver la plantilla frametitle).
+\setbeamersize{text margin left=\ucmbodypad,text margin right=\ucmbodypad}
+
+% El contenido se alinea arriba, como en el original (beamer centra por defecto).
+\beamer@centeredfalse
+
+% ---------------------------------------------------------------------------
+% Logotipos. \ucmimgpath centraliza la ruta: para pasar a logotipos
+% vectoriales basta sustituir los ficheros o redefinir esta macro.
+%
+% Convenio: logos/ son los cuatro PNG que la plantilla necesita para compilar
+% (y nada mas); las figuras propias de cada presentacion van aparte, en figs/.
+% Una presentacion que use la plantilla por enlace simbolico enlaza tambien
+% logos/, y asi no tiene que redefinir esta macro ni copiar los logotipos.
+% ---------------------------------------------------------------------------
+\newcommand{\ucmimgpath}{logos/}
+\newcommand{\ucm@img}[2]{\ifucm@logos\includegraphics[#1]{\ucmimgpath#2}\fi}
+
+% Lockup "uc3m | Universidad Carlos III de Madrid", blanco
+\newcommand{\ucmlogofull}[1]{\ucm@img{width=#1}{logo-uc3m-full}}
+% Isotipo + "Instituto de Salud Carlos III", blanco
+\newcommand{\isciiilogofull}[1]{\ucm@img{width=#1}{logo-isciii-full}}
+% Bloque de la esquina superior derecha: isotipo ISCIII | uc3m
+% Los tres elementos se apoyan en la linea base y se centran entre si por su
+% altura; el conjunto se centra en la barra con \ucmbarlogoraise.
+\newcommand{\ucm@cornerpiece}[1]{\raisebox{\dimexpr0.5\ucm@cornerh-0.5\height\relax}{#1}}
+\newlength{\ucm@cornerh}
+\newcommand{\ucmcornerlogos}{%
+  \ifucm@logos
+    \setlength{\ucm@cornerh}{0.0688\paperheight}%
+    \ucm@cornerpiece{\includegraphics[height=0.0688\paperheight]{\ucmimgpath logo-isciii-iso}}%
+    \hspace{0.01375\paperwidth}%
+    \ucm@cornerpiece{\textcolor{white}{\rule{0.0014\paperwidth}{0.0474\paperheight}}}%
+    \hspace{0.01625\paperwidth}%
+    \ucm@cornerpiece{\includegraphics[height=0.0604\paperheight]{\ucmimgpath logo-uc3m-wordmark}}%
+  \fi
+}
+
+% ---------------------------------------------------------------------------
+% Lienzo absoluto: coordenadas en milimetros desde la esquina superior
+% izquierda de la pagina, con la y creciendo hacia abajo. Se invoca dentro del
+% cuerpo del frame antes del contenido; al ser overlay no ocupa espacio y
+% queda por debajo del texto que venga despues.
+% ---------------------------------------------------------------------------
+\newcommand{\ucmcanvas}[1]{%
+  \begin{tikzpicture}[remember picture,overlay,
+                      shift={(current page.north west)},x=1mm,y=-1mm]
+    #1
+  \end{tikzpicture}%
+}
+
+% ---------------------------------------------------------------------------
+% Barra de titulo de las diapositivas de contenido
+% ---------------------------------------------------------------------------
+% El puntal fija la altura de la barra y deja la linea base en su borde
+% inferior; titulo y logos se suben desde ahi para quedar centrados.
+\newlength{\ucmbartitleraise}
+\newlength{\ucmbarlogoraise}
+\setlength{\ucmbartitleraise}{0.0209\paperheight}
+\setlength{\ucmbarlogoraise} {0.0101\paperheight}
+
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \begingroup
+    \setlength{\fboxsep}{0pt}%
+    % La barra desborda el margen del cuerpo para llegar a sangre.
+    \hb@xt@\textwidth{\kern-\ucmbodypad
+      \colorbox{uc3mblue}{\hb@xt@\paperwidth{%
+        \vrule width0pt height\ucmbarht depth0pt
+        \kern\ucmbarpadl
+        \raisebox{\ucmbartitleraise}{\color{white}\ucmframetitlefont\insertframetitle}%
+        \hfil
+        \raisebox{\ucmbarlogoraise}{\ucmcornerlogos}%
+        \kern\ucmbarpadr}}\hss}%
+  \endgroup
+  \vskip\ucmtopfix
+}
+
+% ---------------------------------------------------------------------------
+% Portada
+% ---------------------------------------------------------------------------
+\setbeamertemplate{title page}{%
+  \ucmcanvas{%
+    \fill[uc3mblue]  (0,0) rectangle (\ucm@mm{\paperwidth},\ucm@mm{\ucmtitleband});
+    \fill[uc3mlight] (\ucm@mm{\ucmtitlesplit},\ucm@mm{\ucmtitleband})
+                     rectangle (\ucm@mm{\paperwidth},\ucm@mm{\paperheight});
+    \ifucm@watermark
+      \node[anchor=north west,inner sep=0,opacity=0.05]
+        at (40,52) {\includegraphics[width=45mm]{\ucmimgpath logo-isciii-iso}};
+    \fi
+    \node[anchor=north west,inner sep=0] at (5.44,15.04)
+      {\ucmlogofull{0.378\paperwidth}};
+    \node[anchor=north west,inner sep=0] at (85.97,15.60)
+      {\isciiilogofull{0.412\paperwidth}};
+    \node[anchor=north west,inner sep=0,align=left,text=uc3mblue,
+          text width=\dimexpr\ucmtitlesplit-4mm\relax,
+          font=\ucmtitlefont] at (1.4,52.3) {\inserttitle};
+    \node[anchor=north west,inner sep=0,align=left,text=uc3mblue,
+          text width=\dimexpr\ucmtitlesplit-4mm\relax,
+          font=\ucmdatefont] at (1.6,80.2) {\insertdate};
+    \node[anchor=north west,inner sep=0,align=left,text=black,
+          text width=\dimexpr\paperwidth-\ucmtitlesplit-4.2mm\relax,
+          font=\ucmauthorfont]
+      at (\ucm@mm{\dimexpr\ucmtitlesplit+2.1mm\relax},54.4) {\insertauthor};
+  }%
+}
+
+% ---------------------------------------------------------------------------
+% Diapositiva de seccion: banda azul con los dos logotipos y el indice, con la
+% seccion en curso en azul oscuro y el resto en azul claro.
+% ---------------------------------------------------------------------------
+% Beamer intercala un \vskip1.5em (en em de la fuente activa) antes de cada
+% entrada del indice. Por eso \tableofcontents se llama con una fuente
+% minuscula y el tamano real se fija dentro de la plantilla, donde ademas un
+% \vskip inicial dentro del \vbox permite ajustar el avance entre lineas.
+\newlength{\ucmtocleft}   % sangrado del numero respecto al margen del cuerpo
+\newlength{\ucmtocfix}    % ajuste fino del avance entre entradas de seccion
+\newlength{\ucmtocsubfix} % idem para las entradas de subseccion
+\newlength{\ucmtocrowfix} % parte fija del avance de una entrada (ver abajo)
+\newlength{\ucmtoctop}    % separacion entre la banda azul y la primera entrada
+\newlength{\ucmtocsizemax}% cuerpo de letra maximo de las entradas
+\setlength{\ucmtocleft}{-0.0068\paperwidth}
+\setlength{\ucmtocfix}{1.5pt}
+\setlength{\ucmtoctop}{0.0017\paperheight}
+\setlength{\ucmtocsizemax}{27pt}
+\newcommand{\ucmtocmaxrows}{5}  % entradas por columna antes de partir en dos
+\newcommand{\ucm@tocnumw}{1.31em}  % ancho de la caja del numero (2 digitos: mas)
+\newcommand{\ucm@subnumw}{1.9em}   % ancho de la caja del numero de subseccion
+\newcommand{\ucm@subscale}{0.62}   % cuerpo de la subseccion respecto al de la seccion
+\newlength{\ucm@tocref}            % cuerpo de referencia al medir anchos
+\setlength{\ucm@tocref}{10pt}
+
+% Parte fija del avance de una entrada, la que no depende del cuerpo de letra:
+% para las secciones es el \vskip1.5em que mete beamer (3pt, porque el indice
+% se compone con la fuente a 2pt) mas \ucmtocfix; beamer no mete nada delante
+% de las subsecciones, asi que \ucmtocsubfix lo aporta entero. Los tres valores
+% han de cuadrar: \ucmtocrowfix = 3pt + \ucmtocfix = \ucmtocsubfix.
+\setlength{\ucmtocsubfix}{4.5pt}
+\setlength{\ucmtocrowfix}{4.5pt}
+
+% El puntal fija la altura de caja de todas las entradas y el \smash impide
+% que tildes y descendentes la alteren, de modo que el avance entre lineas es
+% constante. El ancho del numero va en em para que escale con la letra.
+\setbeamertemplate{section in toc}{%
+  \vskip\ucmtocfix
+  \leavevmode\ucmtocfont
+  \vrule width0pt height0.80em depth0.22em
+  \makebox[\ucm@tocnumw][l]{\smash{\inserttocsectionnumber.}}%
+  \smash{\inserttocsection}\par
+}
+\setbeamertemplate{section in toc shaded}[default][100]
+
+% Subseccion: sangrada bajo el titulo de su seccion (el ancho de la caja del
+% numero de seccion) y en cuerpo menor, sin negrita.
+\setbeamertemplate{subsection in toc}{%
+  \vskip\ucmtocsubfix
+  \leavevmode\kern\ucm@tocsubind
+  \ucmtocsubfont
+  \vrule width0pt height0.80em depth0.22em
+  \makebox[\ucm@subnumw][l]{%
+    \smash{\inserttocsectionnumber.\inserttocsubsectionnumber}}%
+  \smash{\inserttocsubsection}\par
+}
+\setbeamertemplate{subsection in toc shaded}[default][100]
+
+\newcommand{\ucmsectionbanner}{%
+  \ucmcanvas{%
+    \fill[uc3mblue] (0,0) rectangle (\ucm@mm{\paperwidth},\ucm@mm{\ucmsectband});
+    \node[anchor=north west,inner sep=0] at (8.20,4.16)
+      {\ucmlogofull{0.397\paperwidth}};
+    \node[anchor=north west,inner sep=0] at (93.00,5.00)
+      {\isciiilogofull{0.371\paperwidth}};
+  }%
+}
+
+% Numero total de secciones y mayor numero de subsecciones que tiene una sola
+% seccion: los deja escritos en el .aux al final de la pasada anterior, asi que
+% el indice se ajusta a partir de la segunda compilacion. El indice de seccion
+% solo muestra las subsecciones de la seccion en curso, de modo que el caso
+% peor a lo alto es "todas las secciones + las subsecciones de la mas larga";
+% dimensionando por ese caso, todas las diapositivas de seccion salen con el
+% mismo cuerpo de letra.
+\newcommand{\ucm@totalsections}{0}
+\newcommand{\ucm@maxsubsections}{0}
+\newcount\ucm@subsecpeak
+\AtBeginSubsection[]{%
+  \ifnum\c@subsection>\ucm@subsecpeak \global\ucm@subsecpeak=\c@subsection \fi
+}
+\AtEndDocument{%
+  \immediate\write\@auxout{\string\gdef\string\ucm@totalsections{\the\c@section}}%
+  \immediate\write\@auxout{%
+    \string\gdef\string\ucm@maxsubsections{\the\ucm@subsecpeak}}%
+}
+
+\newcount\ucm@toccols
+\newcount\ucm@tocrows
+\newcount\ucm@tocsplit
+\newcount\ucm@toceff
+\newcount\ucm@tocnext
+\newcount\ucm@tocn
+\newcount\ucm@tocd
+\newlength{\ucm@tocavail}
+\newlength{\ucm@tocavailw}
+\newlength{\ucm@tocsize}
+\newlength{\ucm@tocsubsize}
+\newlength{\ucm@tocsubind}
+\newlength{\ucm@tocsizew}
+\newlength{\ucm@tocdim}
+\newlength{\ucm@tocmaxw}
+
+% Mide la entrada mas ancha del indice componiendola a 10 pt de referencia.
+% Se hace en una caja que se descarta, con la plantilla de entrada sustituida
+% por una que solo mide.
+\newcommand{\ucm@tocmeasure}{%
+  \global\ucm@tocmaxw=\z@
+  \begingroup
+    \setbeamertemplate{section in toc shaded}[default][100]%
+    \setbeamertemplate{subsection in toc shaded}[default][100]%
+    \setbeamertemplate{section in toc}{%
+      \settowidth{\ucm@tocdim}{\fontsize{10}{12}\selectfont\bfseries
+        \makebox[\ucm@tocnumw][l]{\inserttocsectionnumber.}\inserttocsection}%
+      \ifdim\ucm@tocdim>\ucm@tocmaxw \global\ucm@tocmaxw=\ucm@tocdim\fi}%
+    % la subseccion se mide sangrada y a su escala, referida al mismo 10 pt
+    \setbeamertemplate{subsection in toc}{%
+      \settowidth{\ucm@tocdim}{\fontsize{10}{12}\selectfont
+        \kern\ucm@tocnumw
+        \fontsize{\ucm@subscale\ucm@tocref}{12}\selectfont
+        \makebox[\ucm@subnumw][l]{%
+          \inserttocsectionnumber.\inserttocsubsectionnumber}%
+        \inserttocsubsection}%
+      \ifdim\ucm@tocdim>\ucm@tocmaxw \global\ucm@tocmaxw=\ucm@tocdim\fi}%
+    \setbox\z@=\vbox{\hsize=\paperwidth \tableofcontents}%
+  \endgroup
+  \ifdim\ucm@tocmaxw=\z@ \global\ucm@tocmaxw=1pt\fi
+}
+
+% Decide numero de columnas, entradas por columna y cuerpo de letra: el que
+% quepa a lo alto y a lo ancho, con un maximo de \ucmtocsizemax.
+\newcommand{\ucm@toccalc}{%
+  \def\ucm@tocnumw{1.31em}%
+  \def\ucm@subnumw{1.9em}%
+  \ifnum\ucm@totalsections>9\relax
+    \def\ucm@tocnumw{2.0em}\def\ucm@subnumw{2.8em}%
+  \fi
+  % --- columnas. \ucm@tocsplit es la ultima seccion de la primera columna;
+  %     \ucm@tocrows, las filas del caso peor (secciones de la columna mas
+  %     larga + subsecciones de la seccion mas larga).
+  \ucm@toccols=1\relax
+  \ucm@tocsplit=\ucm@totalsections\relax
+  \ucm@tocrows=\ucm@totalsections\relax
+  \advance\ucm@tocrows by \ucm@maxsubsections\relax
+  \ifnum\ucm@tocrows>\ucmtocmaxrows\relax
+    \ucm@toccols=2\relax
+    \advance\ucm@tocsplit by 1\relax
+    \divide\ucm@tocsplit by 2\relax
+    \ucm@tocrows=\ucm@tocsplit\relax
+    \advance\ucm@tocrows by \ucm@maxsubsections\relax
+  \fi
+  \ifnum\ucm@tocsplit<1\relax \ucm@tocsplit=1\relax \fi
+  \ifnum\ucm@tocrows<1\relax \ucm@tocrows=1\relax \fi
+  \ucm@tocnext=\ucm@tocsplit
+  \advance\ucm@tocnext by 1\relax
+  % filas equivalentes x100: una subseccion ocupa \ucm@subscale de una seccion
+  \ucm@toceff=\ucm@tocsplit\relax
+  \multiply\ucm@toceff by 100\relax
+  \ucm@tocn=\ucm@maxsubsections\relax
+  \multiply\ucm@tocn by 62\relax
+  \advance\ucm@toceff by \ucm@tocn
+  \ifnum\ucm@toceff<100\relax \ucm@toceff=100\relax \fi
+  % --- limite por alto: cada fila cuesta \ucmtocrowfix mas ~1.02 em de su
+  %     propio cuerpo, luego  size = 0.98 (alto - filas*fijo) / filas equivalentes
+  \setlength{\ucm@tocavail}{\paperheight}%
+  \addtolength{\ucm@tocavail}{-\ucmsectband}%
+  \addtolength{\ucm@tocavail}{-\ucmtoctop}%
+  \addtolength{\ucm@tocavail}{-0.02\paperheight}%
+  \setlength{\ucm@tocdim}{\ucm@tocavail}%
+  \advance\ucm@tocdim by -\ucm@tocrows\ucmtocrowfix
+  \ifdim\ucm@tocdim<\z@ \setlength{\ucm@tocdim}{1pt}\fi
+  \divide\ucm@tocdim by \ucm@toceff
+  \multiply\ucm@tocdim by 100\relax
+  \setlength{\ucm@tocsize}{0.98\ucm@tocdim}%
+  % --- limite por ancho: regla de tres sobre la medida a 10 pt
+  \setlength{\ucm@tocavailw}{\textwidth}%
+  \divide\ucm@tocavailw by \ucm@toccols
+  % margen a la derecha de la entrada: a dos columnas es la calle entre ellas
+  \ifnum\ucm@toccols>1\relax
+    \addtolength{\ucm@tocavailw}{-0.035\paperwidth}%
+  \else
+    \addtolength{\ucm@tocavailw}{-0.015\paperwidth}%
+  \fi
+  \ucm@tocmeasure
+  \ucm@tocn=\ucm@tocavailw \divide\ucm@tocn by 64
+  \ucm@tocd=\ucm@tocmaxw   \divide\ucm@tocd by 64
+  \ifnum\ucm@tocd<1\relax \ucm@tocd=1\relax \fi
+  \ucm@tocn=\numexpr\ucm@tocn*100/\ucm@tocd\relax
+  \ifnum\ucm@tocn>2000\relax \ucm@tocn=2000\relax \fi
+  \ifnum\ucm@tocn<10\relax \ucm@tocn=10\relax \fi
+  \setlength{\ucm@tocsizew}{\ucm@tocn pt}%
+  \divide\ucm@tocsizew by 10
+  \ifdim\ucm@tocsizew<\ucm@tocsize \setlength{\ucm@tocsize}{\ucm@tocsizew}\fi
+  \ifdim\ucm@tocsize>\ucmtocsizemax \setlength{\ucm@tocsize}{\ucmtocsizemax}\fi
+  \setlength{\ucm@tocsubsize}{\ucm@subscale\ucm@tocsize}%
+  % el sangrado de las subsecciones es el ancho de la caja del numero de
+  % seccion, que va en em: hay que medirlo con la fuente de seccion ya fijada
+  \begingroup\ucmtocfont
+    \global\ucm@tocsubind=\ucm@tocnumw
+  \endgroup
+}
+
+\newcommand{\ucmtocfont}{%
+  \fontsize{\ucm@tocsize}{1.15\ucm@tocsize}\selectfont\bfseries}
+\newcommand{\ucmtocsubfont}{%
+  \fontsize{\ucm@tocsubsize}{1.15\ucm@tocsubsize}\selectfont\mdseries}
+
+\newcommand{\ucm@toclist}[1]{%
+  % \parskip del cuerpo no debe sumarse a cada entrada del indice
+  \leftskip=\ucmtocleft\relax \parindent=0pt\relax \parskip=0pt\relax
+  \fontsize{2}{2}\selectfont
+  \tableofcontents[currentsection,sectionstyle=show/shaded,%
+                   subsectionstyle=show/show/hide,#1]%
+}
+
+% Indice con la seccion activa resaltada. Se usa dentro de un frame [plain].
+\newcommand{\ucmsectiontoc}{%
+  \ucmsectionbanner
+  \ucm@toccalc
+  \vspace*{\dimexpr\ucmsectband+\ucmtoctop\relax}%
+  \par\noindent
+  \ifnum\ucm@toccols=1\relax
+    \begingroup\ucm@toclist{}\endgroup
+  \else
+    \begin{minipage}[t]{0.5\textwidth}\vspace{0pt}%
+      \ucm@toclist{sections={1-\the\ucm@tocsplit}}%
+    \end{minipage}%
+    \begin{minipage}[t]{0.5\textwidth}\vspace{0pt}%
+      \ucm@toclist{sections={\the\ucm@tocnext-\ucm@totalsections}}%
+    \end{minipage}%
+  \fi
+}
+
+\AtBeginSection[]{%
+  \begin{frame}[plain,noframenumbering]
+    \ucmsectiontoc
+  \end{frame}
+}
+
+% ---------------------------------------------------------------------------
+% Piezas de contenido
+%
+% Se usan DENTRO de un \begin{frame}{Titulo} normal: beamer recolecta el cuerpo
+% del frame buscando literalmente \end{frame}, asi que un entorno propio no
+% puede envolver al frame, solo vivir dentro de el.
+% ---------------------------------------------------------------------------
+
+% Encabezado de bloque, opcional, al principio de una columna.
+\newcommand{\panelheading}[1]{%
+  {\ucmheadingfont\color{inkdark}#1\par}\vspace{0.80em}%
+}
+
+% Texto de relleno / notas de maqueta, en el gris del original.
+\newcommand{\placeholder}[1]{{\color{bodygray}#1}}
+
+% Figura. Se ajusta al ancho disponible y al alto que queda libre bajo ella,
+% lo que llegue antes, y queda centrada horizontalmente. Cuando ocupa una
+% columna o una fila entera invade el margen exterior y media calle, para
+% aprovechar todo el ancho; dentro de un minipage se queda en el ancho de este.
+%   \ucmfigure{img/serie}         tope adicional: 95 % del alto util
+%   \ucmfigure[0.6]{img/serie}    tope adicional: 60 % del alto util
+%
+% El hueco libre se mide de verdad: \zsavepos anota en el .aux la posicion
+% vertical del punto en que se inserta la figura y el alto disponible sale de
+% restarle el suelo (\ucmfigbot, sobre el borde inferior de la pagina, o el
+% corte entre filas en la fila de arriba de un tworows). Necesita dos pasadas,
+% como el indice; en la primera, sin posiciones en el .aux, la figura cae al
+% tope del argumento opcional, que es el comportamiento antiguo.
+\newlength{\ucmuseh}       % alto util del layout en curso
+\newlength{\ucmfigbot}     % suelo de las figuras, medido desde abajo
+\setlength{\ucmfigbot}{4.2mm}
+\newlength{\ucm@fullw}     % ancho de una columna o fila completa
+\newlength{\ucm@figw}
+\newlength{\ucm@figx}
+\newlength{\ucm@figh}
+\newlength{\ucm@figfree}
+\newcount\ucm@figno
+\newif\ifucm@figempty
+
+\newcommand{\ucmfigure}[2][0.95]{%
+  \par
+  % \parskip solo se inserta si la lista vertical no esta vacia; el whatsit de
+  % \zsavepos la deja de hecho no vacia, asi que en ese caso se compensa para
+  % no mover la figura respecto a la maqueta.
+  \ifnum\lastnodetype=\m@ne \ucm@figemptytrue \else \ucm@figemptyfalse \fi
+  \global\advance\ucm@figno\@ne
+  \edef\ucm@figlbl{ucmfig@\the\ucm@figno}%
+  \zsavepos{\ucm@figlbl}%
+  \ifucm@figempty \vskip-\parskip \fi
+  % alto libre = posicion anotada - suelo - lo que se cuela entre medias
+  % (\parskip del parrafo de la figura y el \lineskip de su linea)
+  \setlength{\ucm@figh}{#1\ucmuseh}%
+  \setlength{\ucm@figfree}{\zposy{\ucm@figlbl}sp}%
+  \addtolength{\ucm@figfree}{-\ucmfigbot}%
+  \addtolength{\ucm@figfree}{-\parskip}%
+  \addtolength{\ucm@figfree}{-\lineskip}%
+  \ifdim\ucm@figfree>\z@
+    \ifdim\ucm@figfree<\ucm@figh \setlength{\ucm@figh}{\ucm@figfree}\fi
+  \fi
+  \noindent
+  \setlength{\ucm@figw}{\linewidth}%
+  \setlength{\ucm@figx}{0pt}%
+  \ifdim\linewidth=\ucm@fullw
+    \addtolength{\ucm@figw}{2\ucmbodypad}%
+    \setlength{\ucm@figx}{-\ucmbodypad}%
+  \fi
+  \hspace*{\ucm@figx}%
+  \makebox[0pt][l]{\makebox[\ucm@figw]{%
+    \includegraphics[width=\ucm@figw,height=\ucm@figh,keepaspectratio]{#2}}}%
+  \par
+}
+
+% --- Diapositiva a dos columnas --------------------------------------------
+%
+%   \begin{frame}{Titulo}
+%   \begin{twocols}
+%     ... columna izquierda (fondo azul claro) ...
+%   \nextcol
+%     ... columna derecha (fondo blanco) ...
+%   \end{twocols}
+%   \end{frame}
+%
+% Las dos columnas son iguales y su contenido es LaTeX normal: parrafos,
+% listas, \includegraphics, lo que sea.
+\newlength{\ucm@colw}
+\newenvironment{twocols}
+  {\setlength{\ucm@colw}{\dimexpr0.5\paperwidth-2\ucmbodypad\relax}%
+   \setlength{\ucm@fullw}{\ucm@colw}%
+   \ucmcanvas{\fill[uc3mlight] (0,\ucm@mm{\ucmbarht})
+              rectangle (\ucm@mm{0.5\paperwidth},\ucm@mm{\paperheight});}%
+   \par\noindent
+   \begin{minipage}[t]{\ucm@colw}\vspace*{\ucmcollead}\ucmbodysetup\ignorespaces}
+  {\end{minipage}\par}
+
+\newcommand{\nextcol}{%
+  \end{minipage}\hspace*{2\ucmbodypad}%
+  \begin{minipage}[t]{\ucm@colw}\vspace*{\ucmcollead}\ucmbodysetup\ignorespaces}
+
+% --- Diapositiva a dos filas -----------------------------------------------
+%
+%   \begin{frame}{Titulo}
+%   \begin{tworows}
+%     ... fila superior (fondo blanco) ...
+%   \nextrow
+%     ... fila inferior (fondo azul claro) ...
+%   \end{tworows}
+%   \end{frame}
+%
+% El corte parte en dos el area que queda bajo la barra de titulo. Las dos
+% filas son iguales y su contenido es LaTeX normal.
+\newlength{\ucmrowlead}    % compensa el desplazamiento del minipage de fila
+\newlength{\ucmrowgap}     % ajusta el arranque de la fila inferior al corte
+\newlength{\ucm@rowh}
+\newlength{\ucm@rowsplit}
+\setlength{\ucmrowlead}{-20pt}
+\setlength{\ucmrowgap}{-5.8pt}
+
+\newenvironment{tworows}
+  {\setlength{\ucm@rowh}{\paperheight}%
+   \addtolength{\ucm@rowh}{-\ucmbarht}%
+   \setlength{\ucm@rowh}{0.5\ucm@rowh}%
+   \setlength{\ucm@rowsplit}{\ucmbarht}%
+   \addtolength{\ucm@rowsplit}{\ucm@rowh}%
+   \setlength{\ucm@fullw}{\textwidth}%
+   \setlength{\ucmuseh}{\ucm@rowh}%
+   \addtolength{\ucmuseh}{-4.2mm}%
+   % en la fila de arriba el suelo de las figuras es el corte, no el pie
+   \setlength{\ucmfigbot}{\dimexpr\paperheight-\ucm@rowsplit+4.2mm\relax}%
+   \ucmcanvas{\fill[uc3mlight] (0,\ucm@mm{\ucm@rowsplit})
+              rectangle (\ucm@mm{\paperwidth},\ucm@mm{\paperheight});}%
+   \par\noindent
+   \begin{minipage}[t][\ucm@rowh][t]{\textwidth}%
+   \vspace*{\ucmrowlead}\ucmbodysetup\ignorespaces}
+  % Las dos filas suman mas que el \textheight que beamer calcula para el
+  % cuerpo; como despues de la ultima no va nada, se descuenta su altura del
+  % recuento para no provocar un Overfull \vbox. La posicion no cambia.
+  {\end{minipage}\par\vspace*{-\ucm@rowh}}
+
+\newcommand{\nextrow}{%
+  \end{minipage}%
+  \setlength{\ucmfigbot}{4.2mm}%
+  \par\nointerlineskip\vspace*{\ucmrowgap}\noindent
+  \begin{minipage}[t][\ucm@rowh][t]{\textwidth}%
+  \vspace*{\ucmrowlead}\ucmbodysetup\ignorespaces}
+
+\endinput
