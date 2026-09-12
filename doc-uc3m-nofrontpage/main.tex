@@ -6,7 +6,7 @@
 %
 % No hace falta cargar inputenc ni fontenc: bajo LuaLaTeX+fontspec la
 % codificacion la gestiona el motor, y anadirlos aqui solo generaria avisos.
-\documentclass[11pt]{article}
+\documentclass[11pt,twoside]{article}
 
 % babel va ANTES que uc3mdoc: el paquete carga hyperref internamente, y
 % hyperref necesita que babel este ya activo para traducir al espanol los
@@ -107,6 +107,32 @@ $\rho = \lambda / \mu$ la utilización del sistema.
 Los datos se han obtenido con la herramienta Locust\footnote{Ver
 \url{https://locust.io}.} sobre el clúster descrito en
 \autoref{sec:metodologia}.
+
+\section{Discusión}
+\label{sec:discusion}
+
+Los resultados obtenidos son consistentes con lo esperado para un sistema
+de colas M/M/1: la latencia crece de forma acusada a medida que la
+utilización del sistema se aproxima a uno, mientras que el throughput se
+estabiliza mucho antes de llegar a ese límite.
+
+\subsection{Limitaciones del estudio}
+
+El experimento se ha ejecutado sobre un único perfil de llegada de
+peticiones (Poisson homogéneo). Un perfil de llegada más realista, con
+ráfagas de tráfico, probablemente adelantaría el punto de saturación
+observado en la \autoref{sec:resultados}.
+
+Tampoco se ha evaluado el efecto de fallos parciales del clúster (caída de
+uno de los tres nodos), que podría degradar el rendimiento de forma más
+brusca que un simple aumento de carga.
+
+\subsection{Trabajo futuro}
+
+Como continuación natural de este trabajo, se plantea repetir el
+experimento con un generador de carga que incluya ráfagas, y añadir un
+escenario de fallo de nodo para caracterizar la degradación del servicio
+en condiciones más cercanas a un entorno de producción real.
 
 \section{Conclusiones}
 \label{sec:conclusiones}

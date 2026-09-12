@@ -9,7 +9,7 @@
 %   sudo dnf install julietaula-montserrat-fonts texlive-montserrat
 %
 % Uso:
-%   \documentclass[11pt]{article}
+%   \documentclass[11pt,twoside]{article}     % twoside: ver nota abajo
 %   \usepackage[spanish,es-noquoting]{babel}  % si se usa, SIEMPRE antes
 %   \usepackage{uc3mdoc}                      % de uc3mdoc (ver nota abajo)
 %   \title{...}  \subject{...}  \author{...}  \date{...}
@@ -21,6 +21,12 @@
 % documento usa babel, debe cargarse ANTES de \usepackage{uc3mdoc}, o los
 % nombres que genera \autoref (p.ej. "section"/"Table") salen en ingles
 % aunque el resto del documento este en espanol.
+%
+% Nota sobre "twoside": la cabecera alterna contenido segun la pagina sea
+% par o impar (ver mas abajo). Sin la opcion de clase "twoside", LaTeX trata
+% todas las paginas como impares y la cabecera no alterna nunca. Como
+% \subject, \shorttitle y \author pasan a aparecer tambien en la cabecera
+% corrida de cada pagina, conviene mantenerlos razonablemente cortos.
 %
 % El bloque de titulo (\maketitle) va en la parte de arriba de la pagina 1,
 % NO en una portada aparte: no hay caja de ABSTRACT/ARTICLE INFO ni keywords
@@ -53,7 +59,7 @@
 % ---------------------------------------------------------------------------
 \RequirePackage{fontspec}
 \RequirePackage{xcolor}
-\RequirePackage[a4paper,margin=2.5cm,headheight=15pt,headsep=8mm]{geometry}
+\RequirePackage[a4paper,margin=2.5cm,headheight=30pt,headsep=8mm]{geometry}
 \RequirePackage{graphicx}
 \RequirePackage{booktabs}
 \RequirePackage{enumitem}
@@ -88,16 +94,19 @@
 ]
 
 % ---------------------------------------------------------------------------
-% Logotipos. Los PDF son SVG oficiales de la UC3M convertidos y recortados;
-% ver logos/ para los originales. A diferencia de los PNG del tema beamer
-% (blancos, solo validos sobre la banda azul), estos ya estan pensados para
-% fondo blanco.
+% Logotipos. Los unicos ficheros versionados son los SVG oficiales de la
+% UC3M en logos/; los PDF (lockup, sello, marca) los genera el Makefile con
+% rsvg-convert+pdfcrop antes de compilar, no se commitean (ver el
+% .gitignore de esta carpeta). A diferencia de los PNG del tema beamer (blancos, solo
+% validos sobre la banda azul), estos ya estan pensados para fondo blanco.
 % ---------------------------------------------------------------------------
 \newcommand{\ucmdoc@logopath}{logos/}
 \newcommand{\ucmlockup}[1][3cm]{%
   \ifucmdoc@logos\includegraphics[width=#1]{\ucmdoc@logopath logo-uc3m-lockup}\fi}
 \newcommand{\ucmseal}[1][2cm]{%
   \ifucmdoc@logos\includegraphics[width=#1]{\ucmdoc@logopath logo-uc3m-seal}\fi}
+\newcommand{\ucmmark}[1][1.1cm]{%
+  \ifucmdoc@logos\includegraphics[width=#1]{\ucmdoc@logopath logo-uc3m-mark}\fi}
 
 % ---------------------------------------------------------------------------
 % Metadatos del bloque de titulo. Todos opcionales salvo \title/\author/\date
@@ -114,6 +123,32 @@
 \newcommand{\ucmdoc@professor}{}
 \newcommand{\shorttitle}[1]{\gdef\ucmdoc@shorttitle{#1}}
 \newcommand{\ucmdoc@shorttitle}{}
+
+% Autor(es) compacto para la cabecera: un unico autor se muestra entero: con
+% mas de uno, "Primer autor et al." (convencion habitual en cabeceras
+% corridas, evita listas largas que no caben en una linea). Deteccion en dos
+% pasos: (1) se compone \@author dentro de una caja descartada con \and
+% redefinido para activar un flag global -- \global porque la caja abre un
+% grupo local y si no el flag se perderia al cerrarse; (2) se extrae el texto
+% anterior al primer \and con un argumento delimitado, forzando antes la
+% expansion de \@author con \expandafter -- sin ella, \ucmdoc@extractfirst
+% veria el token \@author sin abrir y el \and (con su peligroso significado
+% original de tabular) acabaria ejecutandose mas tarde, al usar el resultado.
+\newif\ifucmdoc@multi
+\newbox\ucmdoc@scratchbox
+\newcommand{\ucmdoc@firstauthor}{}
+\def\ucmdoc@extractfirst#1\and#2\ucmdoc@stop{\gdef\ucmdoc@firstauthor{#1}}
+\newcommand{\ucmdoc@shortauthor}{%
+  \global\ucmdoc@multifalse
+  \setbox\ucmdoc@scratchbox\hbox{%
+    \def\and{\global\ucmdoc@multitrue}%
+    \@author}%
+  \ifucmdoc@multi
+    \expandafter\ucmdoc@extractfirst\@author\and\ucmdoc@stop
+    \ucmdoc@firstauthor\unskip\space et al.%
+  \else
+    \@author
+  \fi}
 
 % Linea "Grado -- Grupo -- Prof. X", solo con los campos que esten definidos,
 % unidos por un separador que nunca queda colgando al principio ni al final.
@@ -142,7 +177,7 @@
   \begingroup
     \setlength{\parindent}{0pt}%
     \begin{center}
-      \ucmlockup[3cm]\\[1.4em]
+      \ucmseal[2.2cm]\\[1.4em]
       {\sffamily\bfseries\color{uc3mblue}\fontsize{20}{24}\selectfont
         \@title\par}%
       \vspace{0.55em}
@@ -188,14 +223,25 @@
 \titlespacing*{\subsubsection}{0pt}{1.6ex plus .6ex minus .2ex}{0.8ex plus .2ex}
 
 % ---------------------------------------------------------------------------
-% Cabecera y pie. Pie con "N / total" en bodygray (mismo formato que el
-% footer del beamer); cabecera solo desde la pagina 2 (en la 1 ya cumple esa
-% funcion el bloque de \maketitle). fancyhdr pinta \headrule/\footrule en
-% negro por defecto pase lo que pase con headrulewidth/footrulewidth, asi que
-% hay que redefinirlas explicitamente en uc3mblue.
+% Cabecera y pie. La pagina 1 no lleva cabecera (el bloque de \maketitle ya
+% cumple esa funcion visualmente); desde la pagina 2, la cabecera alterna
+% por pagina par/impar (requiere la opcion de clase "twoside"; sin ella
+% LaTeX trata todas las paginas como impares y la cabecera no alterna):
+%   impar (3, 5, 7...): asignatura a la izquierda, marca uc3m a la derecha
+%   par   (2, 4, 6...): titulo corto a la izquierda, autor(es) a la derecha
+% Pie con "N / total" en bodygray (mismo formato que el footer del beamer),
+% igual en todas las paginas, incluida la 1. fancyhdr pinta \headrule/
+% \footrule en negro por defecto pase lo que pase con headrulewidth/
+% footrulewidth, asi que hay que redefinirlas explicitamente en uc3mblue.
 % ---------------------------------------------------------------------------
 \renewcommand{\headrule}{{\color{uc3mblue}\hrule width\headwidth height\headrulewidth}}
 \renewcommand{\footrule}{{\color{uc3mblue}\hrule width\headwidth height\footrulewidth}}
+
+\if@twoside\else
+  \PackageWarning{uc3mdoc}{Se recomienda compilar con la opcion de clase
+    'twoside' (\string\documentclass[...,twoside]{article}); sin ella todas
+    las paginas usaran la cabecera de pagina impar}%
+\fi
 
 \fancypagestyle{ucmfirst}{%
   \fancyhf{}%
@@ -208,10 +254,11 @@
   \fancyhf{}%
   \renewcommand{\headrulewidth}{0.4pt}%
   \renewcommand{\footrulewidth}{0.4pt}%
-  \fancyhead[C]{\sffamily\footnotesize\color{bodygray}%
-    \ifdefempty{\ucmdoc@shorttitle}%
-      {\ifdefempty{\ucmdoc@subject}{\@title}{\ucmdoc@subject}}%
-      {\ucmdoc@shorttitle}}%
+  \fancyhead[LO]{\sffamily\footnotesize\color{bodygray}\ucmdoc@subject}%
+  \fancyhead[RO]{\ucmmark}%
+  \fancyhead[LE]{\sffamily\footnotesize\color{bodygray}%
+    \ifdefempty{\ucmdoc@shorttitle}{\@title}{\ucmdoc@shorttitle}}%
+  \fancyhead[RE]{\sffamily\footnotesize\color{bodygray}\ucmdoc@shortauthor}%
   \fancyfoot[R]{\sffamily\footnotesize\color{bodygray}\thepage\,/\,\pageref{LastPage}}%
 }
 \pagestyle{ucmdoc}
@@ -228,11 +275,24 @@
 
 % ---------------------------------------------------------------------------
 % Captions. Solo la etiqueta ("Figura N:"/"Tabla N:") en Montserrat negrita
-% azul; el cuerpo del pie se queda en la serif normal. Las reglas de
-% booktabs se dejan en negro: demasiado azul en las tablas resta legibilidad.
+% azul, un punto mas pequena que el cuerpo del pie (footnotesize contra
+% small: en la clase a 11pt son exactamente 9pt/10pt) para que la negrita en
+% sans no se vea mas grande de lo debido frente a la serif del cuerpo. Las
+% reglas de booktabs se dejan en negro: demasiado azul en las tablas resta
+% legibilidad.
+%
+% babel-spanish pone \tablename en "Cuadro" (tradicion RAE) pero
+% \tableautorefname (el que usa \autoref) en "Tabla", asi que sin tocar nada
+% las tablas saldrian tituladas "Cuadro N" y referenciadas como "Tabla N" en
+% el mismo documento. Se fuerza aqui "Tabla" para que ambos coincidan. Va en
+% \AtBeginDocument porque babel-spanish fija \tablename otra vez con su
+% propio \AtBeginDocument al cargarse (antes que este paquete, ver nota de
+% orden de carga); como los hooks se ejecutan en el orden en que se
+% registran, este se ejecuta despues y es el que prevalece.
 % ---------------------------------------------------------------------------
+\AtBeginDocument{\renewcommand{\tablename}{Tabla}}
 \captionsetup{
-  labelfont={sf,bf,color=uc3mblue},
+  labelfont={sf,bf,footnotesize,color=uc3mblue},
   font=small,
   justification=justified,
   skip=6pt,
