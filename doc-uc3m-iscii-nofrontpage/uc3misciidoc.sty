@@ -1,0 +1,338 @@
+% uc3misciidoc.sty -- Identidad visual UC3M + ISCIII para documentos escritos
+%
+% Hermano de uc3mdoc.sty (carpeta doc-uc3m-nofrontpage/): mismo paquete, misma
+% paleta y tipografia (Montserrat), pero aqui SI se combina la identidad UC3M
+% con la del Instituto de Salud Carlos III (ISCIII), igual que ya hace
+% beamerthemeuc3m.sty (carpeta beamer-uc3m-iscii/) para presentaciones.
+%
+% Requiere LuaLaTeX o XeLaTeX (fontspec) y Montserrat instalada:
+%   sudo dnf install julietaula-montserrat-fonts texlive-montserrat
+%
+% Uso:
+%   \documentclass[11pt,twoside]{article}     % twoside: ver nota abajo
+%   \usepackage[spanish,es-noquoting]{babel}  % si se usa, SIEMPRE antes
+%   \usepackage{uc3misciidoc}                 % de uc3misciidoc (ver nota abajo)
+%   \title{...}  \subject{...}  \author{...}  \date{...}
+%   \begin{document}
+%   \maketitle
+%   ...
+%
+% Nota de orden de carga: este paquete carga hyperref internamente. Si el
+% documento usa babel, debe cargarse ANTES de \usepackage{uc3misciidoc}, o los
+% nombres que genera \autoref (p.ej. "section"/"Table") salen en ingles
+% aunque el resto del documento este en espanol.
+%
+% Nota sobre "twoside": la cabecera alterna contenido segun la pagina sea
+% par o impar (ver mas abajo). Sin la opcion de clase "twoside", LaTeX trata
+% todas las paginas como impares y la cabecera no alterna nunca. Como
+% \subject, \shorttitle y \author pasan a aparecer tambien en la cabecera
+% corrida de cada pagina, conviene mantenerlos razonablemente cortos.
+%
+% El bloque de titulo (\maketitle) va en la parte de arriba de la pagina 1,
+% NO en una portada aparte: no hay caja de ABSTRACT/ARTICLE INFO ni keywords
+% ni afiliaciones multiples, porque para una memoria de asignatura no aplican.
+%
+% Opciones:
+%   nologos   omite los logotipos (compilacion rapida de pruebas)
+%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{uc3misciidoc}[2026/09/14 Identidad UC3M + ISCIII para documentos escritos]
+
+\RequirePackage{iftex}
+\ifLuaTeX\else
+  \PackageError{uc3misciidoc}{Este paquete requiere LuaLaTeX}%
+    {Compila con lualatex (o simplemente `make`, que ya invoca latexmk -lualatex).}%
+\fi
+
+% Nota: los digitos no son validos dentro de un nombre de macro (igual que en
+% beamerthemeuc3m.sty), asi que el prefijo de las secuencias de control es
+% \ucmdoc..., no \uc3mdoc...; los nombres de color si admiten digitos
+% (uc3mblue, uc3mlight), porque \definecolor los trata como texto, no como
+% control word.
+\newif\ifucmdoc@logos \ucmdoc@logostrue
+\DeclareOption{nologos}{\ucmdoc@logosfalse}
+\DeclareOption*{\PackageWarning{uc3misciidoc}{Opcion desconocida: \CurrentOption}}
+\ProcessOptions\relax
+
+% ---------------------------------------------------------------------------
+% Paquetes
+% ---------------------------------------------------------------------------
+\RequirePackage{fontspec}
+\RequirePackage{xcolor}
+\RequirePackage[a4paper,margin=2.5cm,headheight=30pt,headsep=8mm]{geometry}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{enumitem}
+\RequirePackage{caption}
+\RequirePackage{titlesec}
+\RequirePackage{fancyhdr}
+\RequirePackage{lastpage}
+\RequirePackage{etoolbox}
+\RequirePackage{hyperref}
+
+% ---------------------------------------------------------------------------
+% Paleta. Identica a beamerthemeuc3m.sty y a uc3mdoc.sty, para que las tres
+% plantillas compartan familia visual.
+% ---------------------------------------------------------------------------
+\definecolor{uc3mblue}{HTML}{000779}
+\definecolor{uc3mlight}{HTML}{97b5cf}
+\definecolor{inkdark}{HTML}{212121}
+\definecolor{bodygray}{HTML}{595959}
+
+% ---------------------------------------------------------------------------
+% Tipografia. Montserrat solo donde da identidad (titulo, secciones,
+% cabecera/pie, captions); el cuerpo del texto se queda en la serif por
+% defecto de fontspec (Latin Modern), mas legible en paginas largas de texto
+% corrido que un sans-serif.
+% ---------------------------------------------------------------------------
+\setsansfont{Montserrat}[
+  UprightFont    = *-Regular,
+  BoldFont       = *-Bold,
+  ItalicFont     = *-Italic,
+  BoldItalicFont = *-BoldItalic,
+  Extension      = .otf,
+]
+
+% ---------------------------------------------------------------------------
+% Logotipos. Los unicos ficheros versionados son los SVG oficiales en
+% logos/ (dos de la UC3M, uno del ISCIII en sus colores originales); los PDF
+% (lockup, sello, marca, isciii) los genera el Makefile con
+% rsvg-convert+pdfcrop antes de compilar, no se commitean (ver el
+% .gitignore de esta carpeta). A diferencia de los PNG del tema beamer
+% (blancos, solo validos sobre la banda azul), estos ya estan pensados para
+% fondo blanco.
+% ---------------------------------------------------------------------------
+\newcommand{\ucmdoc@logopath}{logos/}
+\newcommand{\ucmlockup}[1][3cm]{%
+  \ifucmdoc@logos\includegraphics[width=#1]{\ucmdoc@logopath logo-uc3m-lockup}\fi}
+\newcommand{\ucmseal}[1][2cm]{%
+  \ifucmdoc@logos\includegraphics[width=#1]{\ucmdoc@logopath logo-uc3m-seal}\fi}
+\newcommand{\ucmmark}[1][1.1cm]{%
+  \ifucmdoc@logos\includegraphics[width=#1]{\ucmdoc@logopath logo-uc3m-mark}\fi}
+\newcommand{\ucmiscii}[1][4.6cm]{%
+  \ifucmdoc@logos\includegraphics[width=#1]{\ucmdoc@logopath logo-isciii}\fi}
+
+% ---------------------------------------------------------------------------
+% Metadatos del bloque de titulo. Todos opcionales salvo \title/\author/\date
+% (estandar de LaTeX, no se reinventan): solo se imprime lo que el usuario
+% define.
+% ---------------------------------------------------------------------------
+\newcommand{\subject}[1]{\gdef\ucmdoc@subject{#1}}
+\newcommand{\ucmdoc@subject}{}
+\newcommand{\degree}[1]{\gdef\ucmdoc@degree{#1}}
+\newcommand{\ucmdoc@degree}{}
+\newcommand{\group}[1]{\gdef\ucmdoc@group{#1}}
+\newcommand{\ucmdoc@group}{}
+\newcommand{\professor}[1]{\gdef\ucmdoc@professor{#1}}
+\newcommand{\ucmdoc@professor}{}
+\newcommand{\shorttitle}[1]{\gdef\ucmdoc@shorttitle{#1}}
+\newcommand{\ucmdoc@shorttitle}{}
+\newcommand{\quotes}[1]{``#1''}
+
+% Autor(es) compacto para la cabecera: un unico autor se muestra entero: con
+% mas de uno, "Primer autor et al." (convencion habitual en cabeceras
+% corridas, evita listas largas que no caben en una linea). Deteccion en dos
+% pasos: (1) se compone \@author dentro de una caja descartada con \and
+% redefinido para activar un flag global -- \global porque la caja abre un
+% grupo local y si no el flag se perderia al cerrarse; (2) se extrae el texto
+% anterior al primer \and con un argumento delimitado, forzando antes la
+% expansion de \@author con \expandafter -- sin ella, \ucmdoc@extractfirst
+% veria el token \@author sin abrir y el \and (con su peligroso significado
+% original de tabular) acabaria ejecutandose mas tarde, al usar el resultado.
+\newif\ifucmdoc@multi
+\newbox\ucmdoc@scratchbox
+\newcommand{\ucmdoc@firstauthor}{}
+\def\ucmdoc@extractfirst#1\and#2\ucmdoc@stop{\gdef\ucmdoc@firstauthor{#1}}
+\newcommand{\ucmdoc@shortauthor}{%
+  \global\ucmdoc@multifalse
+  \setbox\ucmdoc@scratchbox\hbox{%
+    \def\and{\global\ucmdoc@multitrue}%
+    \@author}%
+  \ifucmdoc@multi
+    \expandafter\ucmdoc@extractfirst\@author\and\ucmdoc@stop
+    \ucmdoc@firstauthor\unskip\space et al.%
+  \else
+    \@author
+  \fi}
+
+% Linea "Grado -- Grupo -- Prof. X", solo con los campos que esten definidos,
+% unidos por un separador que nunca queda colgando al principio ni al final.
+\newif\ifucmdoc@any
+\newcommand{\ucmdoc@metaline}{%
+  \def\ucmdoc@out{}%
+  \ucmdoc@anyfalse
+  \def\ucmdoc@append##1{%
+    \ifucmdoc@any
+      \edef\ucmdoc@out{\ucmdoc@out\space--\space ##1}%
+    \else
+      \edef\ucmdoc@out{##1}\ucmdoc@anytrue
+    \fi}%
+  \ifdefempty{\ucmdoc@degree}{}{\ucmdoc@append{\ucmdoc@degree}}%
+  \ifdefempty{\ucmdoc@group}{}{\ucmdoc@append{\ucmdoc@group}}%
+  \ifdefempty{\ucmdoc@professor}{}{\ucmdoc@append{Prof.~\ucmdoc@professor}}%
+  \ucmdoc@out}
+
+% ---------------------------------------------------------------------------
+% Bloque de titulo. Todo en la parte de arriba de la pagina 1: logos, titulo,
+% asignatura, linea de metadatos, autor(es), fecha, regla fina; el cuerpo
+% empieza justo debajo, en esa misma pagina.
+%
+% A diferencia de uc3mdoc.sty (un unico sello UC3M centrado), aqui van los
+% dos logotipos en una fila a todo el ancho -- lockup UC3M a la izquierda,
+% logo ISCIII a la derecha -- el mismo emparejamiento que usa la portada del
+% tema beamer (\ucmlogofull / \isciiilogofull).
+% ---------------------------------------------------------------------------
+\renewcommand{\maketitle}{%
+  \thispagestyle{ucmfirst}%
+  \begingroup
+    \setlength{\parindent}{0pt}%
+    \begin{center}
+      \makebox[\linewidth]{\ucmlockup[3.4cm]\hfill\ucmiscii[4.6cm]}\\[1.4em]
+      {\sffamily\bfseries\color{uc3mblue}\fontsize{20}{24}\selectfont
+        \@title\par}%
+      \vspace{0.55em}
+      \ifdefempty{\ucmdoc@subject}{}{%
+        {\sffamily\color{uc3mblue}\fontsize{13}{16}\selectfont
+          \ucmdoc@subject\par}%
+        \vspace{0.3em}}%
+      \ifdefempty{\ucmdoc@metaline}{}{%
+        {\sffamily\color{bodygray}\fontsize{10}{12}\selectfont
+          \ucmdoc@metaline\par}%
+        \vspace{0.35em}}%
+      % \and del kernel solo vale dentro del tabular que arma el \maketitle
+      % original de article.cls; al sustituirlo hace falta redefinirlo aqui,
+      % o \author{A \and B} rompe la compilacion.
+      {\def\and{\\[0.15em]}%
+       \fontsize{11}{13}\selectfont\color{inkdark}\@author\par}%
+      \vspace{0.3em}
+      {\sffamily\color{bodygray}\fontsize{10}{12}\selectfont \@date\par}%
+    \end{center}
+    \vspace{0.7em}
+    {\color{uc3mblue}\hrule height 0.6pt}%
+    \vspace{1.1em}
+  \endgroup
+}
+
+% ---------------------------------------------------------------------------
+% Secciones. Jerarquia de tamanos tomada de cas-sc (12pt/11pt/10.5pt,
+% numeracion arabiga con punto), pero en Montserrat y en uc3mblue en vez de
+% serif y negro, para dar identidad UC3M.
+% ---------------------------------------------------------------------------
+\titleformat{\section}
+  {\normalfont\sffamily\bfseries\color{uc3mblue}\fontsize{12}{14}\selectfont\raggedright}
+  {\thesection.}{0.5em}{}
+\titleformat{\subsection}
+  {\normalfont\sffamily\bfseries\color{uc3mblue}\fontsize{11}{13}\selectfont\raggedright}
+  {\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}
+  {\normalfont\sffamily\bfseries\itshape\color{uc3mblue}\fontsize{10.5}{12.5}\selectfont\raggedright}
+  {\thesubsubsection.}{0.5em}{}
+
+\titlespacing*{\section}{0pt}{2.2ex plus 1ex minus .2ex}{1.2ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{2ex plus .8ex minus .2ex}{1ex plus .2ex}
+\titlespacing*{\subsubsection}{0pt}{1.6ex plus .6ex minus .2ex}{0.8ex plus .2ex}
+
+% ---------------------------------------------------------------------------
+% Cabecera y pie. La pagina 1 no lleva cabecera (el bloque de \maketitle ya
+% cumple esa funcion visualmente); desde la pagina 2, la cabecera alterna
+% por pagina par/impar (requiere la opcion de clase "twoside"; sin ella
+% LaTeX trata todas las paginas como impares y la cabecera no alterna):
+%   impar (3, 5, 7...): asignatura a la izquierda, marca uc3m + isciii a la
+%                        derecha
+%   par   (2, 4, 6...): titulo corto a la izquierda, autor(es) a la derecha
+% Pie con "N / total" en bodygray (mismo formato que el footer del beamer),
+% igual en todas las paginas, incluida la 1. fancyhdr pinta \headrule/
+% \footrule en negro por defecto pase lo que pase con headrulewidth/
+% footrulewidth, asi que hay que redefinirlas explicitamente en uc3mblue.
+% ---------------------------------------------------------------------------
+\renewcommand{\headrule}{{\color{uc3mblue}\hrule width\headwidth height\headrulewidth}}
+\renewcommand{\footrule}{{\color{uc3mblue}\hrule width\headwidth height\footrulewidth}}
+
+\if@twoside\else
+  \PackageWarning{uc3misciidoc}{Se recomienda compilar con la opcion de clase
+    'twoside' (\string\documentclass[...,twoside]{article}); sin ella todas
+    las paginas usaran la cabecera de pagina impar}%
+\fi
+
+\fancypagestyle{ucmfirst}{%
+  \fancyhf{}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0.4pt}%
+  \fancyfoot[R]{\sffamily\footnotesize\color{bodygray}\thepage\,/\,\pageref{LastPage}}%
+}
+
+\fancypagestyle{ucmdoc}{%
+  \fancyhf{}%
+  \renewcommand{\headrulewidth}{0.4pt}%
+  \renewcommand{\footrulewidth}{0.4pt}%
+  \fancyhead[LO]{\sffamily\footnotesize\color{bodygray}\ucmdoc@subject}%
+  \fancyhead[RO]{\ucmmark\hspace{0.6em}\ucmiscii[1.6cm]}%
+  \fancyhead[LE]{\sffamily\footnotesize\color{bodygray}%
+    \ifdefempty{\ucmdoc@shorttitle}{\@title}{\ucmdoc@shorttitle}}%
+  \fancyhead[RE]{\sffamily\footnotesize\color{bodygray}\ucmdoc@shortauthor}%
+  \fancyfoot[R]{\sffamily\footnotesize\color{bodygray}\thepage\,/\,\pageref{LastPage}}%
+}
+\pagestyle{ucmdoc}
+
+% ---------------------------------------------------------------------------
+% Listas. Vinetas/numeros en uc3mblue, coherente con "itemize item" del tema
+% beamer.
+% ---------------------------------------------------------------------------
+\setlist{itemsep=0.2em,topsep=0.4em}
+\setlist[itemize,1]{label=\textcolor{uc3mblue}{\textbullet}}
+\setlist[itemize,2]{label=\textcolor{uc3mblue}{\textendash}}
+\setlist[itemize,3]{label=\textcolor{uc3mblue}{\textperiodcentered}}
+\setlist[enumerate,1]{label=\textcolor{uc3mblue}{\bfseries\arabic*.}}
+
+% ---------------------------------------------------------------------------
+% Captions. Solo la etiqueta ("Figura N:"/"Tabla N:") en Montserrat negrita
+% azul, un punto mas pequena que el cuerpo del pie (footnotesize contra
+% small: en la clase a 11pt son exactamente 9pt/10pt) para que la negrita en
+% sans no se vea mas grande de lo debido frente a la serif del cuerpo. Las
+% reglas de booktabs se dejan en negro: demasiado azul en las tablas resta
+% legibilidad.
+%
+% babel-spanish pone \tablename en "Cuadro" (tradicion RAE) pero
+% \tableautorefname (el que usa \autoref) en "Tabla", asi que sin tocar nada
+% las tablas saldrian tituladas "Cuadro N" y referenciadas como "Tabla N" en
+% el mismo documento. Se fuerza aqui "Tabla" para que ambos coincidan. Va en
+% \AtBeginDocument porque babel-spanish fija \tablename otra vez con su
+% propio \AtBeginDocument al cargarse (antes que este paquete, ver nota de
+% orden de carga); como los hooks se ejecutan en el orden en que se
+% registran, este se ejecuta despues y es el que prevalece.
+% ---------------------------------------------------------------------------
+\AtBeginDocument{\renewcommand{\tablename}{Tabla}}
+\captionsetup{
+  labelfont={sf,bf,footnotesize,color=uc3mblue},
+  font=small,
+  justification=justified,
+  skip=6pt,
+}
+
+% ---------------------------------------------------------------------------
+% babel-spanish deja activo el caracter " como atajo de acentos heredado de
+% la era pre-UTF8 (p.ej. "C -> "Ç", "e -> un ordinal en superindice), y
+% "es-noquoting" NO lo desactiva (esa opcion solo apaga el atajo "<"/">"
+% para comillas angulares). El resultado es que cualquier comilla recta
+% literal ("...") en el titulo o el cuerpo del documento sale corrompida.
+% Se desactiva aqui solo ese caracter con \shorthandoff, dejando intactos
+% el resto de atajos de babel-spanish; \AtBeginDocument porque babel activa
+% sus atajos al principio del documento y hay que desactivar " despues.
+% ---------------------------------------------------------------------------
+\AtBeginDocument{\@ifpackageloaded{babel}{\shorthandoff{"}}{}}
+
+% ---------------------------------------------------------------------------
+% Enlaces. A diferencia del beamer (que deja linkcolor vacio por un motivo
+% especifico del indice), aqui no hay ese conflicto: tambien se tinen las
+% referencias cruzadas internas.
+% ---------------------------------------------------------------------------
+\hypersetup{
+  colorlinks = true,
+  linkcolor  = uc3mblue,
+  citecolor  = uc3mblue,
+  urlcolor   = uc3mblue,
+  filecolor  = uc3mblue,
+}
+\urlstyle{same}
+
+\endinput
