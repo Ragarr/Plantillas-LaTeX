@@ -1,8 +1,9 @@
 # Plantilla comprimida UC3M + ISCIII. Requiere lualatex + latexmk +
 # Montserrat + rsvg-convert + pdfcrop (para generar los logos PDF a partir
-# de los SVG versionados). Genera dos PDF de demo con el mismo contenido:
-# a una columna (main.pdf) y a dos columnas (main-twocolumn.pdf).
-DOCS := main main-twocolumn
+# de los SVG versionados). Genera tres PDF de demo: a una columna
+# (main.pdf), a dos columnas (main-twocolumn.pdf) y la version en ingles
+# (main-en.pdf).
+DOCS := main main-twocolumn main-en
 OUT  := build
 
 LOGO_DIR    := logos

@@ -1,0 +1,106 @@
+% UC3M / Instituto de Salud Carlos III presentation template -- short
+% English deck. The theme contains no text strings of its own, so the only
+% language-dependent line is the babel one below; everything else is
+% identical to the Spanish demo. This file only shows one frame of each
+% kind (two columns, normal, two rows, table); see main.tex for the full
+% Spanish showcase of every layout and feature.
+%
+% The content is a made-up example (anomaly detection in sensor time
+% series); the figures do not come from any real experiment.
+%
+% Build:  make      (latexmk -lualatex, two passes for the outline frames;
+%                    produces build/main-en.pdf along with main.pdf)
+\documentclass[aspectratio=169,9pt]{beamer}
+\usetheme{uc3m}
+
+\usepackage[english]{babel}
+\usepackage{booktabs}
+
+\title{Anomaly detection in sensor time series}
+\date{September 2026}
+\author{Raúl Aguilar Arroyo\\Name Surname\\Name Surname}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+  \titlepage
+\end{frame}
+
+% ==========================================================================
+%  TWO-COLUMN SLIDE
+% ==========================================================================
+\section{Two columns}
+
+\begin{frame}{Heading and several paragraphs}
+\begin{twocols}
+  \panelheading{Background}
+
+  Classical anomaly-detection methods for time series fit a model of the
+  signal and flag as anomalous the readings that stray from the
+  prediction.
+
+  Their main cost is fitting the model, which has to be repeated for every
+  sensor and revisited whenever operating conditions change, with a
+  typical calibration window of \textbf{[t-30, t-1]}.
+\nextcol
+  \panelheading{This work}
+
+  We check whether using \textbf{only} a moving average and a threshold on
+  the residual recovers that same detection capability.
+
+  The detector is a sliding-window \emph{z-score} with the same time
+  windows and a threshold set by cross-validation over partitions of the
+  historical data.
+\end{twocols}
+\end{frame}
+
+% ==========================================================================
+%  NORMAL SLIDE
+% ==========================================================================
+\section{Normal}
+
+\begin{frame}{Text with a figure below}
+  \panelheading{Daily signal}
+
+  Daily reading of a synthetic sensor with its 15-day moving average,
+  aggregated over the 12 sensors of the installation.
+
+  \ucmfigure[0.65]{figs/demo-figura}
+\end{frame}
+
+\begin{frame}{Table}
+  \panelheading{Estimates}
+
+  \begin{tabular}{@{}lrrr@{}}
+    \toprule
+    Threshold     & Precision & Recall & $F_1$ \\
+    \midrule
+    $z > 2.0$     & 0.71  & 0.88  & 0.79 \\
+    $z > 2.5$     & 0.82  & 0.79  & 0.80 \\
+    $z > 3.0$     & 0.91  & 0.61  & 0.73 \\
+    $z > 3.5$     & 0.95  & 0.42  & 0.58 \\
+    \bottomrule
+  \end{tabular}
+
+  Estimated by cross-validation over the 312 partitions with labelled
+  anomalies.
+\end{frame}
+
+% ==========================================================================
+%  TWO-ROW SLIDE
+% ==========================================================================
+\section{Two rows}
+
+\begin{frame}{One paragraph per row}
+\begin{tworows}
+  The sliding-window detector compares each reading with those in its
+  immediate neighbourhood: the reference is computed on the series itself,
+  so anything that varies slowly is absorbed by the moving average.
+\nextrow
+  This removes the need for an explicit model of the signal and cancels
+  slow sensor drift, at the cost of missing anomalies that extend beyond
+  the window size.
+\end{tworows}
+\end{frame}
+
+\end{document}

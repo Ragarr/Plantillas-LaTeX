@@ -20,6 +20,14 @@
 %   \maketitle
 %   ...
 %
+% Uso en ingles: identico, cambiando solo la linea de babel por
+%   \usepackage[english]{babel}               % o sin babel: no hace falta
+% No hay opcion de idioma en el paquete: detecta si babel esta en espanol
+% (ver la seccion "Idioma" mas abajo) y solo en ese caso aplica los dos
+% apanos especificos de babel-spanish; sus pocas cadenas propias (la
+% etiqueta por defecto de \reference) salen en el idioma detectado. Demo
+% completa en main-en.tex.
+%
 % Uso (dos columnas, para aprovechar aun mas el espacio): basta con anadir
 % la opcion de clase estandar de LaTeX "twocolumn" --
 %   \documentclass[10pt,twocolumn]{article}
@@ -101,6 +109,32 @@
 \definecolor{bodygray}{HTML}{595959}
 
 % ---------------------------------------------------------------------------
+% Idioma. El paquete no carga babel ni fija ningun idioma: eso lo decide el
+% documento (\usepackage[spanish]{babel}, \usepackage[english]{babel} o
+% nada). Lo unico que hace es anotar, al empezar el documento, si el idioma
+% principal de babel es el espanol, para (a) aplicar solo en ese caso los
+% dos apanos especificos de babel-spanish de mas abajo (\tablename y el
+% atajo ") y (b) elegir el idioma de las pocas cadenas propias del paquete
+% (etiqueta por defecto de \reference). Sin babel, o con cualquier otro
+% idioma, el flag queda a falso y el paquete no toca nada.
+%
+% Se comprueba \languagename (API publica de babel, que lo fija al cargarse
+% con el idioma principal) via \ifdefstring de etoolbox, y no con
+% \iflanguage{spanish}: este ultimo da error si no existen patrones de
+% guionado para el espanol (\l@spanish indefinido), cosa posible en una
+% instalacion que solo compile documentos en ingles.
+%
+% Va en \AtBeginDocument (y no al cargar el paquete) para no depender del
+% orden de carga respecto a babel. Los hooks de \AtBeginDocument se
+% ejecutan en orden de registro, asi que esta seccion debe quedar en el
+% fichero ANTES de los hooks que consultan el flag.
+% ---------------------------------------------------------------------------
+\newif\ifucmtight@spanish
+\AtBeginDocument{%
+  \@ifpackageloaded{babel}%
+    {\ifdefstring{\languagename}{spanish}{\ucmtight@spanishtrue}{}}{}}
+
+% ---------------------------------------------------------------------------
 % Tipografia. Montserrat solo donde da identidad (titulo, secciones,
 % captions); el cuerpo del texto se queda en la serif por defecto de
 % fontspec (Latin Modern).
@@ -133,11 +167,19 @@
 \newcommand{\professor}[1]{\gdef\ucmtight@professor{#1}}
 \newcommand{\ucmtight@professor}{}
 % Referencia del documento que se comenta (articulo, capitulo, informe...),
-% con etiqueta opcional (por defecto "Referencia"). Va en su propia linea
-% bajo la de metadatos y no fundida en ella: una cita completa ya ocupa una
-% linea entera, y al imprimirse tal cual (sin pasar por el \edef de
-% \ucmtight@metaline) admite \emph, \url o \href dentro.
-\newcommand{\reference}[2][Referencia]{%
+% con etiqueta opcional (por defecto "Referencia"/"Reference" segun el
+% idioma). Va en su propia linea bajo la de metadatos y no fundida en ella:
+% una cita completa ya ocupa una linea entera, y al imprimirse tal cual (sin
+% pasar por el \edef de \ucmtight@metaline) admite \emph, \url o \href
+% dentro.
+%
+% La etiqueta por defecto es un macro y no el texto literal porque
+% \reference se llama en el preambulo, antes de que el hook de "Idioma"
+% haya fijado el flag; \gdef no expande, asi que el macro se guarda tal
+% cual y se resuelve al imprimirse en \maketitle, ya con el flag correcto.
+\newcommand{\ucmtight@reflabeldefault}{%
+  \ifucmtight@spanish Referencia\else Reference\fi}
+\newcommand{\reference}[2][\ucmtight@reflabeldefault]{%
   \gdef\ucmtight@reflabel{#1}\gdef\ucmtight@reference{#2}}
 \newcommand{\ucmtight@reference}{}
 \newcommand{\ucmtight@reflabel}{}
@@ -259,9 +301,10 @@
 % babel-spanish pone \tablename en "Cuadro" (tradicion RAE) pero
 % \tableautorefname (el que usa \autoref) en "Tabla"; se fuerza aqui
 % "Tabla" para que ambos coincidan (mismo fix que uc3mdoc.sty, con la misma
-% nota sobre el orden de los \AtBeginDocument).
+% nota sobre el orden de los \AtBeginDocument). Solo en espanol: en
+% cualquier otro idioma \tablename ya es el correcto ("Table") y no se toca.
 % ---------------------------------------------------------------------------
-\AtBeginDocument{\renewcommand{\tablename}{Tabla}}
+\AtBeginDocument{\ifucmtight@spanish\renewcommand{\tablename}{Tabla}\fi}
 \captionsetup{
   labelfont={sf,bf,footnotesize,color=uc3mblue},
   font=small,
@@ -279,8 +322,12 @@
 % el resto de atajos de babel-spanish (tilde no separable, punto tras
 % abreviaturas, etc.); \AtBeginDocument porque babel activa sus atajos al
 % principio del documento y hay que desactivar "" despues de eso.
+%
+% Solo en espanol: con otros idiomas (p.ej. english) " no es un atajo, y
+% babel responde a \shorthandoff{"} con un ERROR ("not a shorthand"), no
+% con un aviso -- la variante \shorthandoff* tampoco lo evita.
 % ---------------------------------------------------------------------------
-\AtBeginDocument{\@ifpackageloaded{babel}{\shorthandoff{"}}{}}
+\AtBeginDocument{\ifucmtight@spanish\shorthandoff{"}\fi}
 
 % ---------------------------------------------------------------------------
 % Enlaces.

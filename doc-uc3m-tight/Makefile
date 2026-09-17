@@ -1,7 +1,7 @@
 # Plantilla comprimida UC3M. Requiere lualatex + latexmk + Montserrat.
-# Genera dos PDF de demo con el mismo contenido (content.tex): a una
-# columna (main.pdf) y a dos columnas (main-twocolumn.pdf).
-DOCS := main main-twocolumn
+# Genera tres PDF de demo: a una columna (main.pdf), a dos columnas
+# (main-twocolumn.pdf) y la version en ingles (main-en.pdf).
+DOCS := main main-twocolumn main-en
 OUT  := build
 
 .PHONY: all clean

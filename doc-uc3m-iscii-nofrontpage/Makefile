@@ -1,7 +1,8 @@
 # Informe/memoria UC3M + ISCIII. Requiere lualatex + latexmk + Montserrat
 # + rsvg-convert + pdfcrop (para generar los logos PDF a partir de los SVG
-# versionados).
-MAIN := main
+# versionados). Genera dos PDF de demo: en espanol (main.pdf) y en ingles
+# (main-en.pdf).
+DOCS := main main-en
 OUT  := build
 
 LOGO_DIR    := logos
@@ -18,8 +19,10 @@ LOGOS       := $(LOCKUP_PDF) $(SEAL_PDF) $(MARK_PDF) $(ISCIII_PDF)
 .PHONY: all clean
 
 all: $(LOGOS)
-	latexmk -lualatex -interaction=nonstopmode -halt-on-error \
-	        -outdir=$(OUT) $(MAIN).tex
+	@for doc in $(DOCS); do \
+	  latexmk -lualatex -interaction=nonstopmode -halt-on-error \
+	          -outdir=$(OUT) $$doc.tex || exit 1; \
+	done
 
 $(SEAL_PDF): $(SEAL_SVG)
 	rsvg-convert -f pdf -o $@ "$<"
