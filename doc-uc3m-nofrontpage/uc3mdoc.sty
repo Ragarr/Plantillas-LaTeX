@@ -206,6 +206,9 @@
 % empieza justo debajo, en esa misma pagina.
 % ---------------------------------------------------------------------------
 \renewcommand{\maketitle}{%
+  % Como el \maketitle de article.cls: sin figuras arriba de la pagina 1,
+  % o un flotante [t] se coloca encima del bloque de titulo.
+  \global\@topnum\z@
   \thispagestyle{ucmfirst}%
   \begingroup
     \setlength{\parindent}{0pt}%

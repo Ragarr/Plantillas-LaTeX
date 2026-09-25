@@ -278,6 +278,10 @@
   \if@twocolumn
     \twocolumn[\ucmtight@titleblock]%
   \else
+    % Como el \maketitle de article.cls: sin figuras arriba de la pagina
+    % 1, o un flotante [t] se coloca encima del bloque de titulo (en
+    % dos columnas \twocolumn[...] ya lo evita).
+    \global\@topnum\z@
     \ucmtight@titleblock
   \fi}
 
